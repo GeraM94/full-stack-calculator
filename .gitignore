@@ -1,0 +1,10 @@
+# Go: los binarios compilados nunca se versionan
+*.exe
+*.exe~
+*.test
+
+# Node
+node_modules/
+
+# Build de Vite (se regenera con npm run build)
+frontend/dist/

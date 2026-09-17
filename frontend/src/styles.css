@@ -1,0 +1,186 @@
+:root {
+  --fondo: #0f1115;
+  --panel: #171a21;
+  --tecla: #22262f;
+  --tecla-hover: #2c313c;
+  --operador: #2f6f8f;
+  --operador-hover: #3a87ab;
+  --go: #00add8; /* el cian del logo de Go */
+  --go-hover: #22c3ea;
+  --texto: #e8eaed;
+  --texto-tenue: #8b93a1;
+  --error: #ff6b6b;
+  --borde: #262b35;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: radial-gradient(circle at 50% 0%, #1a1f2b 0%, var(--fondo) 60%);
+  color: var(--texto);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+.calculadora {
+  width: 100%;
+  max-width: 340px;
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 20px 50px rgb(0 0 0 / 45%);
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.etiqueta {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.flecha {
+  color: var(--go);
+  font-size: 13px;
+}
+
+.pantalla {
+  background: #0c0e13;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: right;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.expresion {
+  font-size: 13px;
+  color: var(--texto-tenue);
+  min-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.resultado {
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.estado {
+  min-height: 18px;
+  margin: 8px 2px 4px;
+  font-size: 12px;
+  text-align: right;
+  color: var(--texto-tenue);
+}
+
+.estado.hay-error {
+  color: var(--error);
+}
+
+.teclado {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.tecla {
+  appearance: none;
+  border: none;
+  border-radius: 12px;
+  background: var(--tecla);
+  color: var(--texto);
+  font-size: 19px;
+  font-family: inherit;
+  padding: 16px 0;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    transform 0.06s ease;
+}
+
+.tecla:hover:not(:disabled) {
+  background: var(--tecla-hover);
+}
+
+.tecla:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.tecla:focus-visible {
+  outline: 2px solid var(--go);
+  outline-offset: 2px;
+}
+
+.tecla:disabled {
+  opacity: 0.45;
+  cursor: progress;
+}
+
+.tecla.funcion {
+  color: var(--texto-tenue);
+  font-size: 16px;
+}
+
+.tecla.operador {
+  background: var(--operador);
+  font-weight: 600;
+}
+
+.tecla.operador:hover:not(:disabled) {
+  background: var(--operador-hover);
+}
+
+.tecla.operador.activo {
+  background: var(--go);
+  color: #06232c;
+}
+
+.tecla.cero {
+  grid-column: span 2;
+}
+
+.tecla.igual {
+  background: var(--go);
+  color: #06232c;
+  font-weight: 700;
+}
+
+.tecla.igual:hover:not(:disabled) {
+  background: var(--go-hover);
+}
+
+.pie {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--texto-tenue);
+}
+
+.pie code {
+  color: var(--go);
+  font-size: 11px;
+}
