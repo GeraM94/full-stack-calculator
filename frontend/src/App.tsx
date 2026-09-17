@@ -1,36 +1,45 @@
-import { useEffect } from "react";
+import { Fragment, useEffect } from "react";
 import { useCalculadora, simbolo } from "./useCalculadora";
 import type { Operacion } from "./api";
 
-const OPERACIONES: readonly Operacion[] = ["/", "*", "-", "+"];
+const FILAS: readonly (readonly [string, string, string])[] = [
+  ["7", "8", "9"],
+  ["4", "5", "6"],
+  ["1", "2", "3"],
+];
+
+/** El operador que acompaña a cada fila de dígitos. */
+const OPERADOR_DE_FILA: readonly Operacion[] = ["*", "-", "+"];
 
 export default function App() {
-  const calc = useCalculadora();
+  const { pantalla, expresion, operacionActiva, error, cargando, dispatch } = useCalculadora();
 
-  // Soporte de teclado físico. El array de dependencias lleva todo lo que el
-  // listener usa: si falta algo, el handler se queda con valores viejos.
   useEffect(() => {
     function alPulsarTecla(evento: KeyboardEvent) {
       const { key } = evento;
 
-      if (key >= "0" && key <= "9") return calc.pulsarDigito(key);
-      if (key === "." || key === ",") return calc.pulsarDigito(".");
+      if (key >= "0" && key <= "9") return dispatch({ tipo: "digito", digito: key });
+      if (key === "." || key === ",") return dispatch({ tipo: "digito", digito: "." });
       if (key === "+" || key === "-" || key === "*" || key === "/") {
-        return void calc.pulsarOperacion(key);
+        return dispatch({ tipo: "operacion", operacion: key });
       }
       if (key === "Enter" || key === "=") {
         evento.preventDefault();
-        return void calc.pulsarIgual();
+        return dispatch({ tipo: "igual" });
       }
-      if (key === "Backspace") return calc.borrar();
-      if (key === "Escape") return calc.limpiar();
+      if (key === "Backspace") return dispatch({ tipo: "borrar" });
+      if (key === "Escape") return dispatch({ tipo: "limpiar" });
     }
 
     window.addEventListener("keydown", alPulsarTecla);
-    // La función devuelta es la limpieza: React la ejecuta antes del siguiente
-    // efecto y al desmontar. Sin esto acumularías un listener por render.
     return () => window.removeEventListener("keydown", alPulsarTecla);
-  }, [calc]);
+    // dispatch nunca cambia de identidad, así que este efecto se ejecuta UNA
+    // vez. Antes dependía del objeto del hook, que era nuevo en cada render.
+    //
+    // Tampoco hace falta comprobar `cargando` aquí: el reducer ignora las
+    // acciones mientras hay una petición en vuelo, así que el teclado ya no
+    // puede saltarse los botones deshabilitados.
+  }, [dispatch]);
 
   return (
     <main className="calculadora">
@@ -43,47 +52,59 @@ export default function App() {
       </header>
 
       <section className="pantalla" aria-live="polite">
-        <div className="expresion">{calc.expresion}</div>
-        <div className="resultado">{calc.pantalla}</div>
+        <div className="expresion">{expresion}</div>
+        <div className="resultado">{pantalla}</div>
       </section>
 
-      <p className={`estado ${calc.error ? "hay-error" : ""}`} role="status">
-        {calc.error ?? (calc.cargando ? "calculando en el servidor…" : "")}
+      <p className={`estado ${error ? "hay-error" : ""}`} role="status">
+        {error ?? (cargando ? "calculando en el servidor…" : "")}
       </p>
 
       <div className="teclado">
-        <Tecla clase="funcion" onClick={calc.limpiar} etiqueta="C" />
-        <Tecla clase="funcion" onClick={calc.cambiarSigno} etiqueta="±" />
-        <Tecla clase="funcion" onClick={calc.borrar} etiqueta="⌫" />
-        <Tecla
-          clase={`operador ${calc.operacionActiva === "/" ? "activo" : ""}`}
-          onClick={() => void calc.pulsarOperacion("/")}
-          etiqueta="÷"
-          desactivada={calc.cargando}
+        <Tecla clase="funcion" etiqueta="C" onClick={() => dispatch({ tipo: "limpiar" })} />
+        <Tecla clase="funcion" etiqueta="±" onClick={() => dispatch({ tipo: "signo" })} />
+        <Tecla clase="funcion" etiqueta="⌫" onClick={() => dispatch({ tipo: "borrar" })} />
+        <TeclaOperador
+          operacion="/"
+          activa={operacionActiva === "/"}
+          desactivada={cargando}
+          onClick={() => dispatch({ tipo: "operacion", operacion: "/" })}
         />
 
-        {/* Los dígitos y los operadores se intercalan en una rejilla de 4
-            columnas, así que se generan fila por fila. */}
-        {[
-          ["7", "8", "9"],
-          ["4", "5", "6"],
-          ["1", "2", "3"],
-        ].map((fila, indice) => (
-          <Fila
-            key={fila.join("")}
-            digitos={fila}
-            operacion={OPERACIONES[indice + 1]}
-            calc={calc}
-          />
-        ))}
+        {FILAS.map((fila, indice) => {
+          const operacion = OPERADOR_DE_FILA[indice];
+          return (
+            <Fragment key={fila.join("")}>
+              {fila.map((digito) => (
+                <Tecla
+                  key={digito}
+                  etiqueta={digito}
+                  onClick={() => dispatch({ tipo: "digito", digito })}
+                />
+              ))}
+              {operacion && (
+                <TeclaOperador
+                  operacion={operacion}
+                  activa={operacionActiva === operacion}
+                  desactivada={cargando}
+                  onClick={() => dispatch({ tipo: "operacion", operacion })}
+                />
+              )}
+            </Fragment>
+          );
+        })}
 
-        <Tecla clase="cero" onClick={() => calc.pulsarDigito("0")} etiqueta="0" />
-        <Tecla onClick={() => calc.pulsarDigito(".")} etiqueta="." />
+        <Tecla
+          clase="cero"
+          etiqueta="0"
+          onClick={() => dispatch({ tipo: "digito", digito: "0" })}
+        />
+        <Tecla etiqueta="." onClick={() => dispatch({ tipo: "digito", digito: "." })} />
         <Tecla
           clase="igual"
-          onClick={() => void calc.pulsarIgual()}
           etiqueta="="
-          desactivada={calc.cargando}
+          desactivada={cargando}
+          onClick={() => dispatch({ tipo: "igual" })}
         />
       </div>
 
@@ -91,34 +112,6 @@ export default function App() {
         cada operación viaja a <code>POST /api/calcular</code>
       </footer>
     </main>
-  );
-}
-
-/** El operador de la primera fila (÷) va suelto arriba porque comparte fila
- *  con las teclas de función; el resto se emparejan con sus dígitos. */
-function Fila({
-  digitos,
-  operacion,
-  calc,
-}: {
-  digitos: string[];
-  operacion: Operacion | undefined;
-  calc: ReturnType<typeof useCalculadora>;
-}) {
-  return (
-    <>
-      {digitos.map((d) => (
-        <Tecla key={d} onClick={() => calc.pulsarDigito(d)} etiqueta={d} />
-      ))}
-      {operacion && (
-        <Tecla
-          clase={`operador ${calc.operacionActiva === operacion ? "activo" : ""}`}
-          onClick={() => void calc.pulsarOperacion(operacion)}
-          etiqueta={simbolo(operacion)}
-          desactivada={calc.cargando}
-        />
-      )}
-    </>
   );
 }
 
@@ -134,5 +127,26 @@ function Tecla({ etiqueta, onClick, clase = "", desactivada = false }: PropsTecl
     <button type="button" className={`tecla ${clase}`} onClick={onClick} disabled={desactivada}>
       {etiqueta}
     </button>
+  );
+}
+
+function TeclaOperador({
+  operacion,
+  activa,
+  desactivada,
+  onClick,
+}: {
+  operacion: Operacion;
+  activa: boolean;
+  desactivada: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Tecla
+      clase={`operador ${activa ? "activo" : ""}`}
+      etiqueta={simbolo(operacion)}
+      desactivada={desactivada}
+      onClick={onClick}
+    />
   );
 }
