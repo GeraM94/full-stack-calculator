@@ -1,5 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { Provider } from "react-redux";
+import { store } from "./store/store";
 import App from "./App";
 import "./styles.css";
 
@@ -13,6 +15,10 @@ if (!contenedor) {
 
 createRoot(contenedor).render(
   <StrictMode>
-    <App />
+    {/* Provider pone la store en el contexto de React: a partir de aquí
+        cualquier componente del árbol puede usar los hooks de react-redux. */}
+    <Provider store={store}>
+      <App />
+    </Provider>
   </StrictMode>,
 );

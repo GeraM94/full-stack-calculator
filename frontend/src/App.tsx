@@ -1,5 +1,13 @@
 import { Fragment, useEffect } from "react";
-import { useCalculadora, simbolo } from "./useCalculadora";
+import { useAppDispatch, useAppSelector } from "./store/store";
+import {
+  resolver,
+  digitoPulsado,
+  borrado,
+  signoCambiado,
+  limpiado,
+} from "./store/calculadoraSlice";
+import { formatear, simbolo } from "./formato";
 import type { Operacion } from "./api";
 
 const FILAS: readonly (readonly [string, string, string])[] = [
@@ -12,34 +20,44 @@ const FILAS: readonly (readonly [string, string, string])[] = [
 const OPERADOR_DE_FILA: readonly Operacion[] = ["*", "-", "+"];
 
 export default function App() {
-  const { pantalla, expresion, operacionActiva, error, cargando, dispatch } = useCalculadora();
+  const dispatch = useAppDispatch();
+
+  // Cada selector suscribe el componente solo a ese trozo del estado.
+  const entrada = useAppSelector((s) => s.calculadora.entrada);
+  const acumulador = useAppSelector((s) => s.calculadora.acumulador);
+  const operacionActiva = useAppSelector((s) => s.calculadora.operacion);
+  const error = useAppSelector((s) => s.calculadora.error);
+  const cargando = useAppSelector((s) => s.calculadora.peticion === "enviando");
 
   useEffect(() => {
     function alPulsarTecla(evento: KeyboardEvent) {
       const { key } = evento;
 
-      if (key >= "0" && key <= "9") return dispatch({ tipo: "digito", digito: key });
-      if (key === "." || key === ",") return dispatch({ tipo: "digito", digito: "." });
+      if (key >= "0" && key <= "9") return void dispatch(digitoPulsado(key));
+      if (key === "." || key === ",") return void dispatch(digitoPulsado("."));
       if (key === "+" || key === "-" || key === "*" || key === "/") {
-        return dispatch({ tipo: "operacion", operacion: key });
+        return void dispatch(resolver(key));
       }
       if (key === "Enter" || key === "=") {
         evento.preventDefault();
-        return dispatch({ tipo: "igual" });
+        return void dispatch(resolver(null));
       }
-      if (key === "Backspace") return dispatch({ tipo: "borrar" });
-      if (key === "Escape") return dispatch({ tipo: "limpiar" });
+      if (key === "Backspace") return void dispatch(borrado());
+      if (key === "Escape") return void dispatch(limpiado());
     }
 
     window.addEventListener("keydown", alPulsarTecla);
     return () => window.removeEventListener("keydown", alPulsarTecla);
-    // dispatch nunca cambia de identidad, así que este efecto se ejecuta UNA
-    // vez. Antes dependía del objeto del hook, que era nuevo en cada render.
+    // dispatch de react-redux también tiene identidad estable.
     //
-    // Tampoco hace falta comprobar `cargando` aquí: el reducer ignora las
-    // acciones mientras hay una petición en vuelo, así que el teclado ya no
-    // puede saltarse los botones deshabilitados.
+    // Y tampoco hace falta comprobar `cargando`: el `condition` del thunk y el
+    // guard de los reducers descartan lo que llegue con algo en vuelo.
   }, [dispatch]);
+
+  const expresion =
+    acumulador !== null && operacionActiva !== null
+      ? `${formatear(acumulador)} ${simbolo(operacionActiva)}`
+      : "";
 
   return (
     <main className="calculadora">
@@ -48,12 +66,12 @@ export default function App() {
         <span className="flecha" aria-hidden="true">
           ↔
         </span>
-        <span className="etiqueta">React + TS</span>
+        <span className="etiqueta">React + RTK</span>
       </header>
 
       <section className="pantalla" aria-live="polite">
         <div className="expresion">{expresion}</div>
-        <div className="resultado">{pantalla}</div>
+        <div className="resultado">{entrada}</div>
       </section>
 
       <p className={`estado ${error ? "hay-error" : ""}`} role="status">
@@ -61,14 +79,14 @@ export default function App() {
       </p>
 
       <div className="teclado">
-        <Tecla clase="funcion" etiqueta="C" onClick={() => dispatch({ tipo: "limpiar" })} />
-        <Tecla clase="funcion" etiqueta="±" onClick={() => dispatch({ tipo: "signo" })} />
-        <Tecla clase="funcion" etiqueta="⌫" onClick={() => dispatch({ tipo: "borrar" })} />
+        <Tecla clase="funcion" etiqueta="C" onClick={() => dispatch(limpiado())} />
+        <Tecla clase="funcion" etiqueta="±" onClick={() => dispatch(signoCambiado())} />
+        <Tecla clase="funcion" etiqueta="⌫" onClick={() => dispatch(borrado())} />
         <TeclaOperador
           operacion="/"
           activa={operacionActiva === "/"}
           desactivada={cargando}
-          onClick={() => dispatch({ tipo: "operacion", operacion: "/" })}
+          onClick={() => void dispatch(resolver("/"))}
         />
 
         {FILAS.map((fila, indice) => {
@@ -79,7 +97,7 @@ export default function App() {
                 <Tecla
                   key={digito}
                   etiqueta={digito}
-                  onClick={() => dispatch({ tipo: "digito", digito })}
+                  onClick={() => dispatch(digitoPulsado(digito))}
                 />
               ))}
               {operacion && (
@@ -87,24 +105,20 @@ export default function App() {
                   operacion={operacion}
                   activa={operacionActiva === operacion}
                   desactivada={cargando}
-                  onClick={() => dispatch({ tipo: "operacion", operacion })}
+                  onClick={() => void dispatch(resolver(operacion))}
                 />
               )}
             </Fragment>
           );
         })}
 
-        <Tecla
-          clase="cero"
-          etiqueta="0"
-          onClick={() => dispatch({ tipo: "digito", digito: "0" })}
-        />
-        <Tecla etiqueta="." onClick={() => dispatch({ tipo: "digito", digito: "." })} />
+        <Tecla clase="cero" etiqueta="0" onClick={() => dispatch(digitoPulsado("0"))} />
+        <Tecla etiqueta="." onClick={() => dispatch(digitoPulsado("."))} />
         <Tecla
           clase="igual"
           etiqueta="="
           desactivada={cargando}
-          onClick={() => dispatch({ tipo: "igual" })}
+          onClick={() => void dispatch(resolver(null))}
         />
       </div>
 
