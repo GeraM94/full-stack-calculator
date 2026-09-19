@@ -310,6 +310,30 @@ container under a supervisor.
 alternative was smaller, but it would make the backend serve the frontend again,
 which is what the refactor removes.
 
+### 3.13 Phase 1 — extract the calculator domain
+
+**Tool:** Claude Code (VS Code extension), same session as Phase 0 at my request
+("Do it yourself, paste the prompt").
+**Prompt:**
+
+> Read REFACTOR_PLAN.md and docs/ANALYSIS.md. Execute Phase 1 only. Apply the
+> Naming convention and the rename tables to every identifier you write or touch:
+> English, full words, no abbreviations. Use rename-symbol, never plain text
+> replace. Respect the scope guard. When Gate 1 passes (including both naming
+> greps), commit with the message given in the plan, show me the diff summary,
+> and stop.
+
+**Outcome:** Commit `b399575`. New package `internal/calculator` with an
+operations table, five sentinel errors, and the three new operations (`power`,
+`squareRoot`, `percentage`); 32 table-driven cases, 100% statement coverage; no
+`net/http` or `encoding/json` in its dependencies. The assistant kept the old
+HTTP contract alive through a small bridge in `main.go` so the app still runs
+between Phase 1 and Phase 2 — not in the plan, accepted because Gate 1 needs the
+whole module to compile. It also renamed the Go module now rather than in
+Phase 2, to avoid writing a Spanish import path in new code. One gate grep gave
+a false positive on a `±` character in a comment; the comment was reworded.
+<!-- adjust after reviewing the diff -->
+
 ---
 
 ## 4. Documentation

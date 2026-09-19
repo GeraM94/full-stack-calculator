@@ -112,10 +112,13 @@ grep -rnE '\b(op|ops|req|res|resp|cfg|calc|params|args|val|msg|btn|idx|num|prev|
 ```
 
 Spanish identifiers — accented characters, `ñ`, and the words from the Phase 0
-rename table (extend the list with what 0.2 and 0.3 find):
+rename table (extend the list with what 0.2 and 0.3 find). Keep the
+`LC_ALL=C.UTF-8` prefix: without a UTF-8 locale `grep` compares bytes, and
+`±`, `×`, and `÷` — legitimate keypad symbols — share bytes with the accented
+vowels and are reported as false positives (found in Phase 1):
 
 ```
-grep -rnEi '[áéíóúñ]|\b(sumar|restar|multiplicar|dividir|operacion|operando|resultado|valor|numero|pantalla|boton|teclado|calculadora|manejador|solicitud|respuesta|mensaje|codigo|cargando|estado|limpiar|calcular|evaluar|configuracion|puerto|prueba)\w*' \
+LC_ALL=C.UTF-8 grep -rnEi '[áéíóúñ]|\b(sumar|restar|multiplicar|dividir|operacion|operando|resultado|valor|numero|pantalla|boton|teclado|calculadora|manejador|solicitud|respuesta|mensaje|codigo|cargando|estado|limpiar|calcular|evaluar|configuracion|puerto|prueba)\w*' \
   --include='*.go' --include='*.ts' --include='*.tsx' --include='*.css' backend/ frontend/src/
 ```
 
@@ -273,27 +276,27 @@ backend/
 
 ### Steps
 
-- [ ] 1.1 Create `internal/calculator/`. Move every pure arithmetic function into it.
-- [ ] 1.2 Define sentinel errors in `errors.go`:
+- [x] 1.1 Create `internal/calculator/`. Move every pure arithmetic function into it.
+- [x] 1.2 Define sentinel errors in `errors.go`:
       `ErrUnknownOperation`, `ErrDivisionByZero`, `ErrNegativeSquareRoot`,
       `ErrInvalidOperandCount`, `ErrNonFiniteResult`.
-- [ ] 1.3 Replace any `switch operation` with an operations table:
+- [x] 1.3 Replace any `switch operation` with an operations table:
       `map[string]Operation`, where `Operation` carries `Arity` and `Apply`.
       Public entry point:
       `Compute(operation string, operands []float64) (float64, error)`.
-- [ ] 1.4 Validate inside the domain: known operation, operand count matches
+- [x] 1.4 Validate inside the domain: known operation, operand count matches
       arity, result is finite (`math.IsNaN`, `math.IsInf`) — return
       `ErrNonFiniteResult` instead of letting a `NaN` reach JSON, where
       `encoding/json` fails on it.
 - 1.5 **Deferred — do not build.** `Operations() []string` lost its only
       consumer when `GET /api/v1/operations` was deferred (Appendix D).
-- [ ] 1.6 Write table-driven tests: every operation's happy path, division by
+- [x] 1.6 Write table-driven tests: every operation's happy path, division by
       zero, square root of a negative number, wrong operand count, unknown
       operation, overflow (`1e308 * 10`), documented float-precision cases
       (`0.1 + 0.2`), percentage semantics.
-- [ ] 1.7 Delete the old arithmetic code from wherever it lived. Do not leave two
+- [x] 1.7 Delete the old arithmetic code from wherever it lived. Do not leave two
       copies.
-- [ ] 1.8 Apply the backend rename table to this package: every Spanish or
+- [x] 1.8 Apply the backend rename table to this package: every Spanish or
       abbreviated identifier becomes its English full-word name, including
       comments and test names. Use rename-symbol, not text replace.
 
