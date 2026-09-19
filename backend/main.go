@@ -8,13 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"example/calculator/internal/calculator"
 )
 
 // -----------------------------------------------------------------------------
@@ -30,9 +30,9 @@ type Peticion struct {
 	Operacion string  `json:"operacion"`
 }
 
-// Usamos dos structs distintos en lugar de uno con `omitempty` a propósito:
-// con `Resultado float64 \`json:"resultado,omitempty"\`` la respuesta de 2-2
-// se quedaría sin el campo, porque omitempty no distingue "cero" de "vacío".
+// Two separate structs rather than one with omitempty, on purpose: with
+// omitempty on the result field, the response for 2-2 would lose the field,
+// because omitempty cannot tell zero from absent.
 type RespuestaOK struct {
 	Resultado float64 `json:"resultado"`
 }
@@ -42,32 +42,19 @@ type RespuestaError struct {
 }
 
 // -----------------------------------------------------------------------------
-// Lógica de negocio
+// Bridge to the calculator domain
 // -----------------------------------------------------------------------------
 
-// ErrDivisionCero es un error centinela: se compara con errors.Is() en vez de
-// mirar el texto del mensaje. Es el patrón idiomático en Go.
-var ErrDivisionCero = errors.New("no se puede dividir entre cero")
+var arithmetic = calculator.New()
 
-// calcular devuelve (resultado, error). Esta firma doble es el corazón de Go:
-// no hay excepciones, el error es un valor más que el llamador debe revisar.
-func calcular(a, b float64, operacion string) (float64, error) {
-	switch operacion {
-	case "+":
-		return a + b, nil
-	case "-":
-		return a - b, nil
-	case "*":
-		return a * b, nil
-	case "/":
-		if b == 0 {
-			// El primer valor es el "cero" del tipo: nunca se usa si hay error.
-			return 0, ErrDivisionCero
-		}
-		return a / b, nil
-	default:
-		return 0, fmt.Errorf("operación no soportada: %q", operacion)
-	}
+// operationNames translates the symbols of this API into the operation names
+// the calculator package understands. Temporary: it goes away when the
+// transport layer speaks operation names itself.
+var operationNames = map[string]string{
+	"+": "add",
+	"-": "subtract",
+	"*": "multiply",
+	"/": "divide",
 }
 
 // -----------------------------------------------------------------------------
@@ -83,20 +70,19 @@ func manejarCalculo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resultado, err := calcular(p.A, p.B, p.Operacion)
+	// An unknown symbol is passed through as is, so the domain reports it.
+	operationName, known := operationNames[p.Operacion]
+	if !known {
+		operationName = p.Operacion
+	}
+
+	result, err := arithmetic.Compute(operationName, []float64{p.A, p.B})
 	if err != nil {
 		escribirError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// JSON no sabe representar Infinity ni NaN: 1e308 * 10 reventaría el
-	// encoder. Lo cortamos aquí y devolvemos un error legible.
-	if math.IsInf(resultado, 0) || math.IsNaN(resultado) {
-		escribirError(w, http.StatusBadRequest, "el resultado excede el rango representable")
-		return
-	}
-
-	escribirJSON(w, http.StatusOK, RespuestaOK{Resultado: resultado})
+	escribirJSON(w, http.StatusOK, RespuestaOK{Resultado: result})
 }
 
 // -----------------------------------------------------------------------------
