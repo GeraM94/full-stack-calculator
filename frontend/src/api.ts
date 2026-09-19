@@ -29,16 +29,11 @@ function esError(r: RespuestaCalculo): r is RespuestaError {
   return "error" in r;
 }
 
-export async function calcular(
-  peticion: PeticionCalculo,
-  signal?: AbortSignal,
-): Promise<number> {
+export async function calcular(peticion: PeticionCalculo): Promise<number> {
   const respuesta = await fetch("/api/calcular", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(peticion),
-    // Permite cancelar la petición desde fuera: lo usa la limpieza del efecto.
-    signal,
   });
 
   let cuerpo: RespuestaCalculo;

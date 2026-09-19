@@ -1,63 +1,36 @@
-import { Fragment, useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "./store/store";
-import {
-  resolver,
-  digitoPulsado,
-  borrado,
-  signoCambiado,
-  limpiado,
-} from "./store/calculadoraSlice";
-import { formatear, simbolo } from "./formato";
+import { useEffect } from "react";
+import { useCalculadora, simbolo } from "./useCalculadora";
 import type { Operacion } from "./api";
 
-const FILAS: readonly (readonly [string, string, string])[] = [
-  ["7", "8", "9"],
-  ["4", "5", "6"],
-  ["1", "2", "3"],
-];
-
-/** El operador que acompaña a cada fila de dígitos. */
-const OPERADOR_DE_FILA: readonly Operacion[] = ["*", "-", "+"];
+const OPERACIONES: readonly Operacion[] = ["/", "*", "-", "+"];
 
 export default function App() {
-  const dispatch = useAppDispatch();
+  const calc = useCalculadora();
 
-  // Cada selector suscribe el componente solo a ese trozo del estado.
-  const entrada = useAppSelector((s) => s.calculadora.entrada);
-  const acumulador = useAppSelector((s) => s.calculadora.acumulador);
-  const operacionActiva = useAppSelector((s) => s.calculadora.operacion);
-  const error = useAppSelector((s) => s.calculadora.error);
-  const cargando = useAppSelector((s) => s.calculadora.peticion === "enviando");
-
+  // Soporte de teclado físico. El array de dependencias lleva todo lo que el
+  // listener usa: si falta algo, el handler se queda con valores viejos.
   useEffect(() => {
     function alPulsarTecla(evento: KeyboardEvent) {
       const { key } = evento;
 
-      if (key >= "0" && key <= "9") return void dispatch(digitoPulsado(key));
-      if (key === "." || key === ",") return void dispatch(digitoPulsado("."));
+      if (key >= "0" && key <= "9") return calc.pulsarDigito(key);
+      if (key === "." || key === ",") return calc.pulsarDigito(".");
       if (key === "+" || key === "-" || key === "*" || key === "/") {
-        return void dispatch(resolver(key));
+        return void calc.pulsarOperacion(key);
       }
       if (key === "Enter" || key === "=") {
         evento.preventDefault();
-        return void dispatch(resolver(null));
+        return void calc.pulsarIgual();
       }
-      if (key === "Backspace") return void dispatch(borrado());
-      if (key === "Escape") return void dispatch(limpiado());
+      if (key === "Backspace") return calc.borrar();
+      if (key === "Escape") return calc.limpiar();
     }
 
     window.addEventListener("keydown", alPulsarTecla);
+    // La función devuelta es la limpieza: React la ejecuta antes del siguiente
+    // efecto y al desmontar. Sin esto acumularías un listener por render.
     return () => window.removeEventListener("keydown", alPulsarTecla);
-    // dispatch de react-redux también tiene identidad estable.
-    //
-    // Y tampoco hace falta comprobar `cargando`: el `condition` del thunk y el
-    // guard de los reducers descartan lo que llegue con algo en vuelo.
-  }, [dispatch]);
-
-  const expresion =
-    acumulador !== null && operacionActiva !== null
-      ? `${formatear(acumulador)} ${simbolo(operacionActiva)}`
-      : "";
+  }, [calc]);
 
   return (
     <main className="calculadora">
@@ -66,59 +39,51 @@ export default function App() {
         <span className="flecha" aria-hidden="true">
           ↔
         </span>
-        <span className="etiqueta">React + RTK</span>
+        <span className="etiqueta">React + TS</span>
       </header>
 
       <section className="pantalla" aria-live="polite">
-        <div className="expresion">{expresion}</div>
-        <div className="resultado">{entrada}</div>
+        <div className="expresion">{calc.expresion}</div>
+        <div className="resultado">{calc.pantalla}</div>
       </section>
 
-      <p className={`estado ${error ? "hay-error" : ""}`} role="status">
-        {error ?? (cargando ? "calculando en el servidor…" : "")}
+      <p className={`estado ${calc.error ? "hay-error" : ""}`} role="status">
+        {calc.error ?? (calc.cargando ? "calculando en el servidor…" : "")}
       </p>
 
       <div className="teclado">
-        <Tecla clase="funcion" etiqueta="C" onClick={() => dispatch(limpiado())} />
-        <Tecla clase="funcion" etiqueta="±" onClick={() => dispatch(signoCambiado())} />
-        <Tecla clase="funcion" etiqueta="⌫" onClick={() => dispatch(borrado())} />
-        <TeclaOperador
-          operacion="/"
-          activa={operacionActiva === "/"}
-          desactivada={cargando}
-          onClick={() => void dispatch(resolver("/"))}
+        <Tecla clase="funcion" onClick={calc.limpiar} etiqueta="C" />
+        <Tecla clase="funcion" onClick={calc.cambiarSigno} etiqueta="±" />
+        <Tecla clase="funcion" onClick={calc.borrar} etiqueta="⌫" />
+        <Tecla
+          clase={`operador ${calc.operacionActiva === "/" ? "activo" : ""}`}
+          onClick={() => void calc.pulsarOperacion("/")}
+          etiqueta="÷"
+          desactivada={calc.cargando}
         />
 
-        {FILAS.map((fila, indice) => {
-          const operacion = OPERADOR_DE_FILA[indice];
-          return (
-            <Fragment key={fila.join("")}>
-              {fila.map((digito) => (
-                <Tecla
-                  key={digito}
-                  etiqueta={digito}
-                  onClick={() => dispatch(digitoPulsado(digito))}
-                />
-              ))}
-              {operacion && (
-                <TeclaOperador
-                  operacion={operacion}
-                  activa={operacionActiva === operacion}
-                  desactivada={cargando}
-                  onClick={() => void dispatch(resolver(operacion))}
-                />
-              )}
-            </Fragment>
-          );
-        })}
+        {/* Los dígitos y los operadores se intercalan en una rejilla de 4
+            columnas, así que se generan fila por fila. */}
+        {[
+          ["7", "8", "9"],
+          ["4", "5", "6"],
+          ["1", "2", "3"],
+        ].map((fila, indice) => (
+          <Fila
+            key={fila.join("")}
+            digitos={fila}
+            operacion={OPERACIONES[indice + 1]}
+            calc={calc}
+          />
+        ))}
 
-        <Tecla clase="cero" etiqueta="0" onClick={() => dispatch(digitoPulsado("0"))} />
-        <Tecla etiqueta="." onClick={() => dispatch(digitoPulsado("."))} />
+        <Tecla clase="cero" onClick={() => calc.pulsarDigito("0")} etiqueta="0" />
+        <Tecla onClick={() => calc.pulsarDigito(".")} etiqueta="." />
         <Tecla
           clase="igual"
+          onClick={() => void calc.pulsarIgual()}
           etiqueta="="
-          desactivada={cargando}
-          onClick={() => void dispatch(resolver(null))}
+          desactivada={calc.cargando}
         />
       </div>
 
@@ -126,6 +91,34 @@ export default function App() {
         cada operación viaja a <code>POST /api/calcular</code>
       </footer>
     </main>
+  );
+}
+
+/** El operador de la primera fila (÷) va suelto arriba porque comparte fila
+ *  con las teclas de función; el resto se emparejan con sus dígitos. */
+function Fila({
+  digitos,
+  operacion,
+  calc,
+}: {
+  digitos: string[];
+  operacion: Operacion | undefined;
+  calc: ReturnType<typeof useCalculadora>;
+}) {
+  return (
+    <>
+      {digitos.map((d) => (
+        <Tecla key={d} onClick={() => calc.pulsarDigito(d)} etiqueta={d} />
+      ))}
+      {operacion && (
+        <Tecla
+          clase={`operador ${calc.operacionActiva === operacion ? "activo" : ""}`}
+          onClick={() => void calc.pulsarOperacion(operacion)}
+          etiqueta={simbolo(operacion)}
+          desactivada={calc.cargando}
+        />
+      )}
+    </>
   );
 }
 
@@ -141,26 +134,5 @@ function Tecla({ etiqueta, onClick, clase = "", desactivada = false }: PropsTecl
     <button type="button" className={`tecla ${clase}`} onClick={onClick} disabled={desactivada}>
       {etiqueta}
     </button>
-  );
-}
-
-function TeclaOperador({
-  operacion,
-  activa,
-  desactivada,
-  onClick,
-}: {
-  operacion: Operacion;
-  activa: boolean;
-  desactivada: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <Tecla
-      clase={`operador ${activa ? "activo" : ""}`}
-      etiqueta={simbolo(operacion)}
-      desactivada={desactivada}
-      onClick={onClick}
-    />
   );
 }
