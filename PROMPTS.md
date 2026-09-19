@@ -285,6 +285,31 @@ assistant reversed its own recommendation once the cost was on the table.
 distroless nginx image. The frontend stays on `nginx:alpine`; the asymmetry is
 recorded as a design decision.
 
+### 3.11 One container or two
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Question: does each part need its own container, or could they be together? I
+> mean, we can do distroless for Go and alpine for the frontend, but if they
+> could be together, isn't it a waste of resources to run two containers?
+
+**Outcome:** Learned that a container is a process, not a virtual machine, so a
+second one costs almost nothing. Got three layouts to compare: two containers;
+one image where Go also serves the static files; both processes in one
+container under a supervisor.
+
+### 3.12 Decision: two containers
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Okay, go ahead with option A.
+
+**Outcome:** My decision: two containers under `docker compose`. The single-image
+alternative was smaller, but it would make the backend serve the frontend again,
+which is what the refactor removes.
+
 ---
 
 ## 4. Documentation

@@ -543,6 +543,7 @@ literally: fresh clone into a temporary directory, follow only the README.
 | Layering depth | Two layers per side | Hexagonal / clean-architecture folders | Proportional to a 4-hour calculator |
 | Backend image | `distroless/static`, non-root; the binary performs its own health check | `alpine` with `wget` | The Go binary is static and needs nothing from the system; no shell or package manager in the image. Cost: a 12-line `healthcheck` subcommand |
 | Frontend image | `nginx:alpine` | A distroless image | Static files need a web server; there is no official distroless nginx, and a hand-written Go file server plus reverse proxy would duplicate nginx |
+| Container layout | Two containers under `docker compose`: nginx (static files and the `/api/` proxy) and the Go API | One image where the Go binary also serves `dist/`; one container running both processes under a supervisor | A container is a process, not a virtual machine, so the overhead of a second one is negligible. The backend stays a pure API microservice, one process per container, and one command still runs both |
 | Naming | English, full words in every identifier and JSON field | Keep the original Spanish names; conventional abbreviations | Reviewers read English; a mixed code base reads as unfinished; full words remove guesswork |
 
 ## Appendix B — Error code table (source of truth for both layers)
