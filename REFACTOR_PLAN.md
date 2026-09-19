@@ -341,8 +341,8 @@ backend/
       isn't one.
 - [ ] 2.7 `cmd/server/main.go`: read `PORT` from an environment variable with a
       default, construct the calculator, build the router, `http.Server` with
-      timeouts, `ListenAndServe`. Nothing else. Graceful shutdown is deferred
-      (Appendix D).
+      timeouts, graceful shutdown on interrupt and terminate signals. Nothing
+      else.
 - [ ] 2.8 Tests with `httptest`: one happy path per operation, each error code,
       malformed JSON, unknown field, wrong method, health.
       Use a fake `Calculator` in at least one test to prove the interface seam.
@@ -572,7 +572,7 @@ and stop.
 Rule applied: what the assignment lists is built, including what it marks
 optional. What the assignment never mentions and the current application does
 not have is deferred, and goes into the README under "What I'd do with more
-time".
+time" — with one exception, graceful shutdown, kept by decision.
 
 | Item | In the assignment? | Decision |
 |---|---|---|
@@ -582,4 +582,4 @@ time".
 | Operation chaining, keyboard mapping | No ("intuitive UI") | **Keep** — the application already has them; removing them would be a regression |
 | `GET /api/v1/operations` and `Operations()` | No | **Deferred** — no consumer; the frontend's `Operation` union is fixed in TypeScript |
 | CORS middleware, `ALLOWED_ORIGIN`, preflight test | No | **Deferred** — never exercised: Vite proxies `/api` in development, nginx in Docker |
-| Graceful shutdown on interrupt and terminate signals | No | **Deferred** — the service is stateless; nothing is lost on a hard stop |
+| Graceful shutdown on interrupt and terminate signals | No | **Build** (step 2.7) — about 15 lines, idiomatic for a Go server, and `docker compose down` stops the container with a terminate signal |

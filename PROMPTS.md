@@ -90,12 +90,14 @@ phases. Used as the working plan for the refactor.
 
 **Outcome:** The plan had accumulated nice-to-haves (operations endpoint, graceful
 shutdown, distroless image, operation chaining, keyboard mapping). I later checked
-each one against the assignment (entries 3.4–3.6); none is required. Deferred the
-operations-listing endpoint (no consumer), graceful shutdown, and the CORS
-middleware (never exercised: Vite proxies in development, nginx in Docker), and
-listed them under "What I'd do with more time". Kept operation chaining and
-keyboard mapping because the original app already had them — removing them would
-be a regression. Chose `alpine` over distroless so the Docker health check can run.
+each one against the assignment (entries 3.4–3.7); none is required. Deferred the
+operations-listing endpoint (nobody consumes it) and the CORS middleware (never
+exercised: Vite proxies in development, nginx in Docker), and listed them under
+"What I'd do with more time". Kept graceful shutdown: about 15 lines, idiomatic
+for a Go server, and Docker stops containers with a terminate signal. Kept
+operation chaining and keyboard mapping because the original app already had
+them — removing them would be a regression. Chose `alpine` over distroless so
+the Docker health check can run.
 
 ### 2.5 Clarifying jargon
 
@@ -238,6 +240,17 @@ the CORS middleware would never run in this project, which I had not noticed.
 **Outcome:** My decision. With that, the rule became: build what the assignment
 lists, even when optional; defer what it never mentions. Recorded in Appendix D
 of `REFACTOR_PLAN.md`.
+
+### 3.7 Final call on the three deferred items
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> And yes, remove the CORS middleware and the operations endpoint — nobody
+> consumes them — and keep graceful shutdown.
+
+**Outcome:** My decision. The assistant had deferred all three; I kept graceful
+shutdown as the one exception to the rule in 3.6.
 
 ---
 
