@@ -285,8 +285,8 @@ backend/
       arity, result is finite (`math.IsNaN`, `math.IsInf`) — return
       `ErrNonFiniteResult` instead of letting a `NaN` reach JSON, where
       `encoding/json` fails on it.
-- [ ] 1.5 Add `Operations() []string` so the transport layer and documentation can
-      list supported operations without duplicating the table.
+- 1.5 **Deferred — do not build.** `Operations() []string` lost its only
+      consumer when `GET /api/v1/operations` was deferred (Appendix D).
 - [ ] 1.6 Write table-driven tests: every operation's happy path, division by
       zero, square root of a negative number, wrong operand count, unknown
       operation, overflow (`1e308 * 10`), documented float-precision cases
@@ -316,14 +316,14 @@ backend/
       ```go
       type Calculator interface {
           Compute(operation string, operands []float64) (float64, error)
-          Operations() []string
       }
       ```
 - [ ] 2.2 Implement `POST /api/v1/calculate`.
       Request: `{"operation":"divide","operands":[10,2]}`.
       Success: `{"result":5}`.
       Error: `{"error":{"code":"DIVISION_BY_ZERO","message":"cannot divide by zero"}}`.
-      Add `GET /api/v1/operations` (returns the list) and `GET /health`.
+      Add `GET /health` (used by the Docker health check in 5.3).
+      `GET /api/v1/operations` is deferred (Appendix D).
 - [ ] 2.3 If `ANALYSIS.md` found per-operation endpoints: remove them and migrate
       the frontend in Phase 3. Record the decision (and the rejected alternative)
       for the README.
@@ -333,16 +333,18 @@ backend/
 - [ ] 2.5 Error mapping in one function: `errors.Is(err, calculator.ErrX)` →
       `(status, code)`. Domain errors → 400 or 422. Anything else → 500 with a
       generic message; the real error is logged, never leaked.
-- [ ] 2.6 Middleware: recover, request logging, CORS (allowed origin from an
-      environment variable). Use the standard library `net/http` (`ServeMux`
-      with method patterns) or keep the router the application already has. Do
-      not add a framework if there isn't one.
-- [ ] 2.7 `cmd/server/main.go`: read `PORT` and `ALLOWED_ORIGIN` from environment
-      variables with defaults, construct the calculator, build the router,
-      `http.Server` with timeouts, graceful shutdown on interrupt and terminate
-      signals. Nothing else.
+- [ ] 2.6 Middleware: recover, request logging. No CORS middleware — deferred
+      (Appendix D): the browser never calls the API cross-origin, because Vite
+      proxies `/api` in development and nginx proxies it in Docker. Use the
+      standard library `net/http` (`ServeMux` with method patterns) or keep the
+      router the application already has. Do not add a framework if there
+      isn't one.
+- [ ] 2.7 `cmd/server/main.go`: read `PORT` from an environment variable with a
+      default, construct the calculator, build the router, `http.Server` with
+      timeouts, `ListenAndServe`. Nothing else. Graceful shutdown is deferred
+      (Appendix D).
 - [ ] 2.8 Tests with `httptest`: one happy path per operation, each error code,
-      malformed JSON, unknown field, wrong method, CORS preflight, health.
+      malformed JSON, unknown field, wrong method, health.
       Use a fake `Calculator` in at least one test to prove the interface seam.
 - [ ] 2.9 Handler signatures use `writer http.ResponseWriter, request *http.Request`.
       Request and response structs are named `CalculateRequest`,
@@ -455,13 +457,14 @@ frontend/src/
 ## Phase 5 — Docker
 
 - [ ] 5.1 `backend/Dockerfile`: multi-stage — `golang:<version>` build with
-      `CGO_ENABLED=0`, final stage `gcr.io/distroless/static` or `alpine`,
-      non-root user, `EXPOSE` the port.
+      `CGO_ENABLED=0`, final stage `alpine`, non-root user, `EXPOSE` the port.
+      (`alpine`, not distroless: the health check in 5.3 runs `wget` inside
+      the container, and a distroless image has neither a shell nor `wget`.)
 - [ ] 5.2 `frontend/Dockerfile`: multi-stage — `node` build, final `nginx:alpine`
       serving `dist/`, `nginx.conf` proxying `/api/` to the backend service so
       the browser talks to one origin (no CORS in Docker).
-- [ ] 5.3 `docker-compose.yml`: two services, one network, environment variables
-      for port and origin, health check on `/health`.
+- [ ] 5.3 `docker-compose.yml`: two services, one network, environment variable
+      for the port, health check on `/health`.
 - [ ] 5.4 `.dockerignore` in both.
 
 **Gate 5:** from a **fresh clone**, `docker compose up --build` works and the
@@ -485,7 +488,7 @@ calculator runs in the browser. Commit `chore: dockerize frontend and backend`.
          alternatives (per-operation endpoints, Redux, framework, hexagonal
          layering)
       9. Assumptions (float64 semantics, percentage definition, precision)
-      10. What I'd do with more time
+      10. What I'd do with more time — start from Appendix D
 - [ ] 6.2 `PROMPTS.md`: chronological, unedited, grouped by phase.
 - [ ] 6.3 Coverage report (deliverable #3): add a `make coverage` (or npm / Go
       script) target that regenerates both reports, commit the summary table to
@@ -563,3 +566,20 @@ replace. Respect the scope guard. When Gate N passes (including both naming
 greps), commit with the message given in the plan, show me the diff summary,
 and stop.
 ```
+
+## Appendix D — Scope, checked against the assignment (2026-09-19)
+
+Rule applied: what the assignment lists is built, including what it marks
+optional. What the assignment never mentions and the current application does
+not have is deferred, and goes into the README under "What I'd do with more
+time".
+
+| Item | In the assignment? | Decision |
+|---|---|---|
+| Exponentiation, square root, percentage | Yes — optional | **Build** (Phase 1, step 3.8) |
+| Dockerfile for full-stack deployment | Yes — optional | **Build** (Phase 5) |
+| `GET /health` | No | **Build** — the Docker health check uses it |
+| Operation chaining, keyboard mapping | No ("intuitive UI") | **Keep** — the application already has them; removing them would be a regression |
+| `GET /api/v1/operations` and `Operations()` | No | **Deferred** — no consumer; the frontend's `Operation` union is fixed in TypeScript |
+| CORS middleware, `ALLOWED_ORIGIN`, preflight test | No | **Deferred** — never exercised: Vite proxies `/api` in development, nginx in Docker |
+| Graceful shutdown on interrupt and terminate signals | No | **Deferred** — the service is stateless; nothing is lost on a hard stop |

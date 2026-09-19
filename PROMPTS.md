@@ -89,9 +89,13 @@ phases. Used as the working plan for the refactor.
 > Did you consider not over-engineering this?
 
 **Outcome:** The plan had accumulated nice-to-haves (operations endpoint, graceful
-shutdown, distroless image, operation chaining, keyboard mapping). I asked for them
-to be cut or demoted to "if time remains", and kept only what the assignment asks
-for. <!-- adjust once you decide which cuts you applied -->
+shutdown, distroless image, operation chaining, keyboard mapping). I later checked
+each one against the assignment (entries 3.4–3.6); none is required. Deferred the
+operations-listing endpoint (no consumer), graceful shutdown, and the CORS
+middleware (never exercised: Vite proxies in development, nginx in Docker), and
+listed them under "What I'd do with more time". Kept operation chaining and
+keyboard mapping because the original app already had them — removing them would
+be a regression. Chose `alpine` over distroless so the Docker health check can run.
 
 ### 2.5 Clarifying jargon
 
@@ -198,7 +202,42 @@ plan, branch, and commit Phase 0.
 
 **Outcome:** My decision, recorded in `docs/ANALYSIS.md` (finding F2 and section
 0.7): features the target needs and the current application lacks get built,
-each with its tests in the phase that adds it.
+each with its tests in the phase that adds it. Narrowed in 3.4–3.6 after reading
+the assignment again.
+
+### 3.4 Scope check against the assignment
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> [attached the assignment text]
+>
+> Let's talk about 2.4, and check this against the assignment. If the assignment
+> requires it, then do it; if not, just let me know.
+
+**Outcome:** None of the five items in 2.4 is required. Two already existed in
+the app (chaining, keyboard mapping) and stay. The answer also pointed out that
+the CORS middleware would never run in this project, which I had not noticed.
+
+### 3.5 Docker stays
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Although Docker is optional, I want to build it.
+
+**Outcome:** My decision. Phase 5 stays in full; the backend image is `alpine`.
+
+### 3.6 Advanced operations stay
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Also build the operations: square root, percentage, and power.
+
+**Outcome:** My decision. With that, the rule became: build what the assignment
+lists, even when optional; defer what it never mentions. Recorded in Appendix D
+of `REFACTOR_PLAN.md`.
 
 ---
 

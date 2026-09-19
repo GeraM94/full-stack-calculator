@@ -156,7 +156,6 @@ Files, module, configuration:
 | `backend/calculadora_test.go` | `internal/calculator/calculator_test.go` |
 | flag `-puerto` | environment variable `PORT` |
 | flag `-web` | removed together with static file serving (see 0.7) |
-| — | new environment variable `ALLOWED_ORIGIN` |
 
 Types, fields, JSON tags:
 
@@ -592,9 +591,9 @@ Tag: `git tag pre-refactor` → `1b273e2` (same commit as `HEAD`).
 | Sentinel errors, mapped to status codes in the transport layer only | One sentinel (`ErrDivisionCero`); unknown operation is an unmatchable `fmt.Errorf`; the non-finite check sits in the handler; everything maps to 400 | Define the five sentinels in `errors.go`; move the non-finite check into the domain; one mapping function in `httpapi` | 1–2 |
 | Operations table (`map[string]Operation`) instead of a growing `switch` | Four-case `switch` on symbol strings | Table with `Arity` and `Apply`, keyed by English names | 1 |
 | Table-driven tests for the domain, about 100% on that package | Table-driven happy path with 6 cases, plus 2 separate error tests; `calcular` at 100%. No overflow, precision, or operand-count cases | Move and extend: all operations, every sentinel, `1e308 * 10`, `0.1 + 0.2`, percentage semantics | 1 |
-| Single `POST /api/v1/calculate` endpoint with a stable error envelope | Already a single endpoint, but `POST /api/calcular`, body `{a, b, operacion}`, error is a bare string | New path, new request shape, `{"error":{"code","message"}}` envelope; add `GET /api/v1/operations` and `GET /health` | 2 |
+| Single `POST /api/v1/calculate` endpoint with a stable error envelope | Already a single endpoint, but `POST /api/calcular`, body `{a, b, operacion}`, error is a bare string | New path, new request shape, `{"error":{"code","message"}}` envelope; add `GET /health` | 2 |
 | Input validation: unknown operation, operand count, non-finite numbers, malformed JSON | Unknown operation and malformed JSON → 400. Operand count not applicable (fixed `a`, `b`). Unknown fields accepted, missing fields → 0, no body limit, decoder error leaked | `DisallowUnknownFields`, `MaxBytesReader`, empty-body handling, arity check in the domain, generic message for decode errors | 2 |
-| `main.go` does wiring only; configuration from environment variables | `main.go` holds everything. Flags `-puerto` and `-web`. Refuses to start without `frontend/dist`. Only `ReadHeaderTimeout`; no graceful shutdown | `cmd/server/main.go`: `PORT`, `ALLOWED_ORIGIN`, timeouts, signal-driven shutdown. Remove static file serving | 2 |
+| `main.go` does wiring only; configuration from environment variables | `main.go` holds everything. Flags `-puerto` and `-web`. Refuses to start without `frontend/dist`. Only `ReadHeaderTimeout`; no graceful shutdown | `cmd/server/main.go`: `PORT`, server timeouts. Remove static file serving. Graceful shutdown deferred (see 0.7) | 2 |
 | Handler tests with `httptest` | None — all HTTP code at 0% coverage | Add per 2.8, including one test with a fake `Calculator` | 2 |
 | Frontend: one API client module, injected into the hook | One module with the only `fetch` (`api.ts`), but the hook imports it directly — nothing is injected | `CalculatorClient` interface + `createHttpClient(baseUrl)`; pass the client to `useCalculator` | 3 |
 | Frontend: `useReducer` state machine in `useCalculator` | Three `useState` calls in one hook; transitions spread over six callbacks. A full `useReducer` version exists in history (`fcd23f4`) | Restore the reducer from `fcd23f4` as the starting point, translate it, align it with the 3.3 table | 3 |
@@ -620,7 +619,9 @@ Tag: `git tag pre-refactor` → `1b273e2` (same commit as `HEAD`).
 | Must the old endpoint survive the migration? | **No.** | Same repository, only one consumer, frontend moves in the same change. `POST /api/calcular` is deleted in Phase 2 |
 | Static file serving from the Go binary | **Remove.** Rejected alternative: keep the single-binary production mode. | The target `main.go` is wiring only and Docker serves `dist/` from nginx. Removing the `/` catch-all also restores 405 for wrong methods, and removes the start-up failure when `dist/` is missing. Recorded for the README |
 | Translation scope | **Everything:** identifiers, JSON fields and values, routes, file and folder names, CSS classes and custom properties, comments, test names, log messages, API error messages, user-visible interface text, README, commit messages from now on. | Default of the plan; reviewers read English. Existing commit messages stay Spanish — history is not rewritten, the `pre-refactor` tag depends on it |
-| Features missing today (`power`, `squareRoot`, `percentage`, `GET /api/v1/operations`, `GET /health`, CORS) | **Build them.** | Confirmed in scope on 2026-09-19. They are new functionality, so each one arrives with its tests in the phase that adds it |
+| Features missing today that the assignment lists, even as optional (`power`, `squareRoot`, `percentage`, Docker), plus `GET /health` for the Docker health check | **Build them.** | Confirmed on 2026-09-19 after checking the assignment. They are new functionality, so each one arrives with its tests in the phase that adds it |
+| Features missing today that the assignment never mentions: `GET /api/v1/operations` with `Operations()`, CORS middleware with `ALLOWED_ORIGIN`, graceful shutdown | **Deferred** to "What I'd do with more time" (plan, Appendix D). | The listing endpoint has no consumer; CORS is never exercised (Vite proxies in development, nginx in Docker); the service is stateless. The assignment asks to prioritize correctness and clarity over extra features |
+| Docker (optional deliverable 4 in the assignment) | **Build it** — Phase 5 stays in full. Final backend image `alpine`. Rejected alternative: distroless. | Confirmed on 2026-09-19 after checking the assignment. The compose health check runs `wget` inside the container; a distroless image has neither a shell nor `wget` |
 | Operation names on the wire | `add`, `subtract`, `multiply`, `divide`, `power`, `squareRoot`, `percentage` | Follows the plan's rename table. Appendix B writes `sqrt`; read it as `squareRoot` (Rule 2) |
 | Translation technique | Rename-symbol (`gopls`, TypeScript language server), one identifier at a time, tests after each batch. No plain-text replace. | Confirmed necessary here: `operacion` is at once a JSON tag, a struct field, a parameter, a state field, and a CSS-adjacent word; `estado` is inside `estado.operacion` and `.estado` |
 | Lint gate for the frontend (Gate 3 says "lint clean") | `tsc --noEmit` with the existing strict flags is the lint gate. | There is no linter today; adding ESLint is not asked for. Goes under "What I'd do with more time" |
@@ -637,10 +638,11 @@ Tag: `git tag pre-refactor` → `1b273e2` (same commit as `HEAD`).
   layer. Steps 1.2, 1.6, and 3.8 assume them, so Phase 1 adds functionality, not
   only structure. **Confirmed in scope (2026-09-19):** whatever the target
   needs and the current application lacks gets built, these three operations
-  included — domain in Phase 1, keys in step 3.8. Percentage semantics remain
-  an assumption: binary, `percentage(value, percent) = value × percent ÷ 100`.
-  Check it against the assignment text, which is not in the repository, and
-  record it under "Assumptions" in the README.
+  included — domain in Phase 1, keys in step 3.8. Checked against the
+  assignment: it lists exponentiation, square root, and percentage as
+  **optional** and does not define what percentage means. The semantics stay an
+  assumption — binary, `percentage(value, percent) = value × percent ÷ 100` —
+  to be recorded under "Assumptions" in the README.
 - **F3 — The backend cannot start without a built frontend** (`log.Fatalf` at
   `main.go:130`). Blocks Phase 5 if it survives Phase 2.
 - **F4 — A finished `useReducer` hook is in history** (`fcd23f4`), including the
