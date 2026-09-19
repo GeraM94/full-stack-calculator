@@ -43,10 +43,10 @@ calculadora/                      one git repository, branch main, no remote
 - **Not present:** `Makefile`, `docker-compose.yml`, any `Dockerfile`,
   `.dockerignore`, continuous-integration file, `.gitattributes`, `docs/`,
   `PROMPTS.md`, `.env` files, lint configuration, frontend test configuration.
-- **Not in the repository:** `REFACTOR_PLAN.md` and the assignment text. The
-  per-phase prompts say "Read REFACTOR_PLAN.md", so the plan has to be added to
-  the repository root before Phase 1. Step 7.2 (walk the assignment line by
-  line) needs the assignment text.
+- **Not in the repository at `pre-refactor`:** `REFACTOR_PLAN.md`,
+  `PROMPTS.md`, and the assignment text. All three were added to the repository
+  root on 2026-09-19, before Phase 1: the per-phase prompts read the plan, and
+  step 7.2 walks `ASSIGNMENT.md` line by line.
 - History — 4 commits, messages in Spanish:
 
   | Commit | Message (translated) | Relevance |
@@ -666,8 +666,9 @@ Tag: `git tag pre-refactor` → `1b273e2` (same commit as `HEAD`).
   `w`, `r`, `p`, `c`, `e`, `d`, `n` are in the rename tables. Recommendation:
   add `t *testing.T` to the plan's list of allowed Go idioms — renaming it would
   look wrong to a Go reviewer, which is the plan's own criterion.
-- **F10 — `REFACTOR_PLAN.md`, the assignment text, and `PROMPTS.md` are not in
-  the repository.** The first two are inputs to later phases.
+- **F10 — `REFACTOR_PLAN.md`, the assignment text, and `PROMPTS.md` were not in
+  the repository.** Resolved on 2026-09-19: all three now sit in the repository
+  root (`REFACTOR_PLAN.md`, `ASSIGNMENT.md`, `PROMPTS.md`).
 - **F11 — `go 1.27` in `go.mod`** requires a `golang:1.27` build image in
   Phase 5; confirm the tag exists then.
 
