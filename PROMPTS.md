@@ -96,8 +96,8 @@ exercised: Vite proxies in development, nginx in Docker), and listed them under
 "What I'd do with more time". Kept graceful shutdown: about 15 lines, idiomatic
 for a Go server, and Docker stops containers with a terminate signal. Kept
 operation chaining and keyboard mapping because the original app already had
-them — removing them would be a regression. Chose `alpine` over distroless so
-the Docker health check can run.
+them — removing them would be a regression. The image question was settled in
+3.8–3.10: distroless for the backend after all.
 
 ### 2.5 Clarifying jargon
 
@@ -251,6 +251,39 @@ of `REFACTOR_PLAN.md`.
 
 **Outcome:** My decision. The assistant had deferred all three; I kept graceful
 shutdown as the one exception to the rule in 3.6.
+
+### 3.8 Questioning the base image
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Is alpine the best image for this approach?
+
+**Outcome:** The assistant had picked `alpine` only because the compose health
+check needs `wget`. The answer admitted it was not the best image in general,
+which made me push further.
+
+### 3.9 Distroless for the backend
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Could we do it with distroless?
+
+**Outcome:** Yes: the binary performs its own health check through a
+`healthcheck` subcommand, about 12 lines in its own file. Accepted — the
+assistant reversed its own recommendation once the cost was on the table.
+
+### 3.10 Distroless for the frontend
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> And would distroless fit well for the frontend too?
+
+**Outcome:** No. Static files need a web server, and there is no official
+distroless nginx image. The frontend stays on `nginx:alpine`; the asymmetry is
+recorded as a design decision.
 
 ---
 

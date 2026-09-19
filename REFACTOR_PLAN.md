@@ -343,9 +343,17 @@ backend/
       default, construct the calculator, build the router, `http.Server` with
       timeouts, graceful shutdown on interrupt and terminate signals. Nothing
       else.
+      One addition for Docker (step 5.1), in its own file
+      `cmd/server/healthcheck.go` so `main.go` stays wiring: when the first
+      argument is `healthcheck`, `runHealthCheck(port)` requests
+      `http://127.0.0.1:<port>/health` with a short timeout and the process
+      exits 0 or 1. The distroless image has no shell and no `wget`, so the
+      binary checks itself.
 - [ ] 2.8 Tests with `httptest`: one happy path per operation, each error code,
       malformed JSON, unknown field, wrong method, health.
       Use a fake `Calculator` in at least one test to prove the interface seam.
+      `runHealthCheck`: returns 0 against a healthy `httptest` server, 1 against
+      a failing one and against a closed port.
 - [ ] 2.9 Handler signatures use `writer http.ResponseWriter, request *http.Request`.
       Request and response structs are named `CalculateRequest`,
       `CalculateResponse`, `ErrorResponse`.
@@ -457,14 +465,18 @@ frontend/src/
 ## Phase 5 — Docker
 
 - [ ] 5.1 `backend/Dockerfile`: multi-stage — `golang:<version>` build with
-      `CGO_ENABLED=0`, final stage `alpine`, non-root user, `EXPOSE` the port.
-      (`alpine`, not distroless: the health check in 5.3 runs `wget` inside
-      the container, and a distroless image has neither a shell nor `wget`.)
+      `CGO_ENABLED=0`, final stage `gcr.io/distroless/static`, `nonroot`
+      variant (confirm the exact tag when writing the file), `EXPOSE` the port,
+      `ENTRYPOINT ["/server"]`. No shell, no package manager, non-root user
+      built in.
 - [ ] 5.2 `frontend/Dockerfile`: multi-stage — `node` build, final `nginx:alpine`
       serving `dist/`, `nginx.conf` proxying `/api/` to the backend service so
-      the browser talks to one origin (no CORS in Docker).
+      the browser talks to one origin (no CORS in Docker). Not distroless:
+      static files need a web server, and there is no official distroless
+      nginx image.
 - [ ] 5.3 `docker-compose.yml`: two services, one network, environment variable
-      for the port, health check on `/health`.
+      for the port. Health checks: backend `["CMD", "/server", "healthcheck"]`
+      (step 2.7); frontend `wget` against nginx, which `nginx:alpine` includes.
 - [ ] 5.4 `.dockerignore` in both.
 
 **Gate 5:** from a **fresh clone**, `docker compose up --build` works and the
@@ -529,6 +541,8 @@ literally: fresh clone into a temporary directory, follow only the README.
 | Frontend state | `useReducer` in one hook | Redux / Zustand / scattered `useState` | A calculator is a state machine; single screen, no shared state |
 | API access | One injected client | `fetch` in components | One seam to mock; mirrors dependency inversion on the backend |
 | Layering depth | Two layers per side | Hexagonal / clean-architecture folders | Proportional to a 4-hour calculator |
+| Backend image | `distroless/static`, non-root; the binary performs its own health check | `alpine` with `wget` | The Go binary is static and needs nothing from the system; no shell or package manager in the image. Cost: a 12-line `healthcheck` subcommand |
+| Frontend image | `nginx:alpine` | A distroless image | Static files need a web server; there is no official distroless nginx, and a hand-written Go file server plus reverse proxy would duplicate nginx |
 | Naming | English, full words in every identifier and JSON field | Keep the original Spanish names; conventional abbreviations | Reviewers read English; a mixed code base reads as unfinished; full words remove guesswork |
 
 ## Appendix B — Error code table (source of truth for both layers)
@@ -579,6 +593,7 @@ time" — with one exception, graceful shutdown, kept by decision.
 | Exponentiation, square root, percentage | Yes — optional | **Build** (Phase 1, step 3.8) |
 | Dockerfile for full-stack deployment | Yes — optional | **Build** (Phase 5) |
 | `GET /health` | No | **Build** — the Docker health check uses it |
+| `healthcheck` subcommand in the server binary | No | **Build** (step 2.7) — the distroless backend image has no `wget` to call `/health` with |
 | Operation chaining, keyboard mapping | No ("intuitive UI") | **Keep** — the application already has them; removing them would be a regression |
 | `GET /api/v1/operations` and `Operations()` | No | **Deferred** — no consumer; the frontend's `Operation` union is fixed in TypeScript |
 | CORS middleware, `ALLOWED_ORIGIN`, preflight test | No | **Deferred** — never exercised: Vite proxies `/api` in development, nginx in Docker |
