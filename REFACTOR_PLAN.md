@@ -115,18 +115,22 @@ Spanish identifiers — accented characters, `ñ`, and the words from the Phase 
 rename table (extend the list with what 0.2 and 0.3 find). Keep the
 `LC_ALL=C.UTF-8` prefix: without a UTF-8 locale `grep` compares bytes, and
 `±`, `×`, and `÷` — legitimate keypad symbols — share bytes with the accented
-vowels and are reported as false positives (found in Phase 1):
+vowels and are reported as false positives (found in Phase 1). `restar` has its
+own alternative so that the English `restart` does not match (found in
+Phase 7, in `docker-compose.yml`):
 
 ```
-LC_ALL=C.UTF-8 grep -rnEi '[áéíóúñ]|\b(sumar|restar|multiplicar|dividir|operacion|operando|resultado|valor|numero|pantalla|boton|teclado|calculadora|manejador|solicitud|respuesta|mensaje|codigo|cargando|estado|limpiar|calcular|evaluar|configuracion|puerto|prueba)\w*' \
+LC_ALL=C.UTF-8 grep -rnEi '[áéíóúñ]|\b(sumar|multiplicar|dividir|operacion|operando|resultado|valor|numero|pantalla|boton|teclado|calculadora|manejador|solicitud|respuesta|mensaje|codigo|cargando|estado|limpiar|calcular|evaluar|configuracion|puerto|prueba)\w*|\brestar([a-su-z]\w*)?\b' \
   --include='*.go' --include='*.ts' --include='*.tsx' --include='*.css' backend/ frontend/src/
 ```
 
 Spanish identifiers, extended — the words Phase 0 found in this code base that
-the list above misses (`docs/ANALYSIS.md`, finding F8):
+the list above misses (`docs/ANALYSIS.md`, finding F8). `pie`, `borde`, and
+`indice` match as whole words only: with `\w*` they would also match the
+English `piece`, `border`, and `indices` (found in Phase 3):
 
 ```
-grep -rnEi '\b(peticion|entrada|acumulador|reiniciar|pulsar|digito|simbolo|formatear|tecla|fila|clase|etiqueta|desactivad|cabecera|flecha|fondo|texto|tenue|borde|borrar|cambiar|signo|casos|nombre|esperado|obtenido|siguiente|inicio|inicial|servidor|direccion|escribir|registrar|cuerpo|contenedor|evento|indice|expresion|activo|funcion|operador|cero|igual|ejemplo)\w*|\bpie\b|hay-error' \
+grep -rnEi '\b(peticion|entrada|acumulador|reiniciar|pulsar|digito|simbolo|formatear|tecla|fila|clase|etiqueta|desactivad|cabecera|flecha|fondo|texto|tenue|borrar|cambiar|signo|casos|nombre|esperado|obtenido|siguiente|inicio|inicial|servidor|direccion|escribir|registrar|cuerpo|contenedor|evento|expresion|activo|funcion|operador|cero|igual|ejemplo)\w*|\b(pie|borde|indice)\b|hay-error' \
   --include='*.go' --include='*.ts' --include='*.tsx' --include='*.css' --include='go.mod' backend/ frontend/src/
 ```
 
@@ -146,43 +150,43 @@ Output: `docs/ANALYSIS.md` containing everything below. No code changes in this 
 
 ### 0.1 Map the repository
 
-- [ ] Print the tree (depth 3, ignoring `node_modules`, `.git`, `dist`, `vendor`).
-- [ ] Identify the backend root and the frontend root. Note whether they are one
+- [x] Print the tree (depth 3, ignoring `node_modules`, `.git`, `dist`, `vendor`).
+- [x] Identify the backend root and the frontend root. Note whether they are one
       repository or two, and whether there is any existing `Makefile`,
       `docker-compose.yml`, or continuous-integration file.
 
 ### 0.2 Backend inventory
 
-- [ ] Go version from `go.mod`; list of dependencies (router? framework? none?).
-- [ ] Where do HTTP handlers live? File and function names.
-- [ ] Where does the arithmetic live? Inside handlers, in a separate package, or
+- [x] Go version from `go.mod`; list of dependencies (router? framework? none?).
+- [x] Where do HTTP handlers live? File and function names.
+- [x] Where does the arithmetic live? Inside handlers, in a separate package, or
       duplicated?
-- [ ] Does any package that does arithmetic import `net/http` or `encoding/json`?
+- [x] Does any package that does arithmetic import `net/http` or `encoding/json`?
       (This is the main smell we are fixing.)
-- [ ] How are errors handled today? Strings? `fmt.Errorf`? Sentinel errors? Which
+- [x] How are errors handled today? Strings? `fmt.Errorf`? Sentinel errors? Which
       status codes are returned, and for which cases?
-- [ ] How is the port and other configuration read? Hardcoded, flag, environment
+- [x] How is the port and other configuration read? Hardcoded, flag, environment
       variable?
-- [ ] Existing tests: which files, what they cover, whether they pass. Record
+- [x] Existing tests: which files, what they cover, whether they pass. Record
       `go test ./... -cover` output verbatim.
-- [ ] `go vet ./...` and `gofmt -l .` output.
-- [ ] Build the **rename table** for the backend: every Spanish or abbreviated
+- [x] `go vet ./...` and `gofmt -l .` output.
+- [x] Build the **rename table** for the backend: every Spanish or abbreviated
       identifier (variables, functions, types, struct fields, JSON tags, file
       names) with its English full-word replacement. Save it in `ANALYSIS.md`;
       Phases 1–2 apply it and the gate grep is extended with it.
 
 ### 0.3 Frontend inventory
 
-- [ ] TypeScript or JavaScript? Is `strict` on in `tsconfig.json`?
-- [ ] Build tool (Vite / Create React App / Next / other) and React version.
-- [ ] State management currently used: `useState` scattered, `useReducer`, Context,
+- [x] TypeScript or JavaScript? Is `strict` on in `tsconfig.json`?
+- [x] Build tool (Vite / Create React App / Next / other) and React version.
+- [x] State management currently used: `useState` scattered, `useReducer`, Context,
       Redux, Zustand, other. List every file that holds calculator state.
-- [ ] Where are `fetch` / `axios` calls? How many files know the backend URL?
-- [ ] Component list with one line each: what it renders, what state it owns.
-- [ ] Existing tests: runner (Vitest / Jest), files, whether they pass, coverage output.
-- [ ] Styling approach (CSS modules, Tailwind, plain CSS, styled-components).
-- [ ] Any responsive handling today? Any loading or error interface?
-- [ ] Build the **rename table** for the frontend: every Spanish or abbreviated
+- [x] Where are `fetch` / `axios` calls? How many files know the backend URL?
+- [x] Component list with one line each: what it renders, what state it owns.
+- [x] Existing tests: runner (Vitest / Jest), files, whether they pass, coverage output.
+- [x] Styling approach (CSS modules, Tailwind, plain CSS, styled-components).
+- [x] Any responsive handling today? Any loading or error interface?
+- [x] Build the **rename table** for the frontend: every Spanish or abbreviated
       identifier (components, props, state fields, hooks, functions, CSS
       classes, file names) with its English full-word replacement. Also list
       user-visible Spanish strings (labels, error messages) separately — they
@@ -190,21 +194,21 @@ Output: `docs/ANALYSIS.md` containing everything below. No code changes in this 
 
 ### 0.4 Current API contract
 
-- [ ] List every endpoint: method, path, request body, success response, error
+- [x] List every endpoint: method, path, request body, success response, error
       response.
-- [ ] Capture one real `curl` per endpoint and paste the output.
-- [ ] Note inconsistencies (different error shapes, mixed status codes, unary
+- [x] Capture one real `curl` per endpoint and paste the output.
+- [x] Note inconsistencies (different error shapes, mixed status codes, unary
       operations squeezed into binary shapes, and so on).
-- [ ] List every Spanish JSON field name (for example `resultado`, `operacion`,
+- [x] List every Spanish JSON field name (for example `resultado`, `operacion`,
       `operandos`). These change in Phase 2 and the frontend types change with
       them in Phase 3.
 
 ### 0.5 Baseline
 
-- [ ] Both applications build and run locally. Record the exact commands that worked.
-- [ ] Record baseline numbers: backend coverage %, frontend coverage %, number of
+- [x] Both applications build and run locally. Record the exact commands that worked.
+- [x] Record baseline numbers: backend coverage %, frontend coverage %, number of
       tests.
-- [ ] `git tag pre-refactor` so the starting point is recoverable.
+- [x] `git tag pre-refactor` so the starting point is recoverable.
 
 ### 0.6 Gap analysis
 
@@ -236,17 +240,17 @@ the README "Design decisions" section.
 
 ### 0.7 Refactor strategy decision
 
-- [ ] **Extract, don't rewrite.** If the arithmetic is small (under about 100 lines)
+- [x] **Extract, don't rewrite.** If the arithmetic is small (under about 100 lines)
       and tangled with HTTP, move it out. Do not rebuild the backend from zero.
-- [ ] If the frontend uses Redux (or similar) for a single screen: plan its removal
+- [x] If the frontend uses Redux (or similar) for a single screen: plan its removal
       in Phase 3 and record the reason in the README. If it uses scattered
       `useState`, plan the consolidation into one reducer.
-- [ ] Decide whether existing endpoints must survive during the migration. Default:
+- [x] Decide whether existing endpoints must survive during the migration. Default:
       no — the frontend is in the same repository and moves in the same change.
-- [ ] Decide the scope of the Spanish → English translation: identifiers and JSON
+- [x] Decide the scope of the Spanish → English translation: identifiers and JSON
       fields are always translated; confirm whether user-visible interface text
       is translated too (default: yes). Record the decision for the README.
-- [ ] Translation technique: rename with the editor's rename-symbol tool
+- [x] Translation technique: rename with the editor's rename-symbol tool
       (`gopls` / TypeScript language server), one identifier at a time, running
       tests after each batch. Do not use global find-and-replace on plain text —
       `valor` also matches inside `evaluar`.
@@ -314,35 +318,35 @@ backend/
 
 ### Steps
 
-- [ ] 2.1 Create `internal/httpapi/`. Declare the interface **here**, in the
+- [x] 2.1 Create `internal/httpapi/`. Declare the interface **here**, in the
       consuming package:
       ```go
       type Calculator interface {
           Compute(operation string, operands []float64) (float64, error)
       }
       ```
-- [ ] 2.2 Implement `POST /api/v1/calculate`.
+- [x] 2.2 Implement `POST /api/v1/calculate`.
       Request: `{"operation":"divide","operands":[10,2]}`.
       Success: `{"result":5}`.
       Error: `{"error":{"code":"DIVISION_BY_ZERO","message":"cannot divide by zero"}}`.
       Add `GET /health` (used by the Docker health check in 5.3).
       `GET /api/v1/operations` is deferred (Appendix D).
-- [ ] 2.3 If `ANALYSIS.md` found per-operation endpoints: remove them and migrate
+- [x] 2.3 If `ANALYSIS.md` found per-operation endpoints: remove them and migrate
       the frontend in Phase 3. Record the decision (and the rejected alternative)
       for the README.
-- [ ] 2.4 Validation in the handler: malformed JSON → 400 `INVALID_JSON`; wrong
+- [x] 2.4 Validation in the handler: malformed JSON → 400 `INVALID_JSON`; wrong
       method → 405; empty or oversized body handled; unknown fields rejected
       (`DisallowUnknownFields`).
-- [ ] 2.5 Error mapping in one function: `errors.Is(err, calculator.ErrX)` →
+- [x] 2.5 Error mapping in one function: `errors.Is(err, calculator.ErrX)` →
       `(status, code)`. Domain errors → 400 or 422. Anything else → 500 with a
       generic message; the real error is logged, never leaked.
-- [ ] 2.6 Middleware: recover, request logging. No CORS middleware — deferred
+- [x] 2.6 Middleware: recover, request logging. No CORS middleware — deferred
       (Appendix D): the browser never calls the API cross-origin, because Vite
       proxies `/api` in development and nginx proxies it in Docker. Use the
       standard library `net/http` (`ServeMux` with method patterns) or keep the
       router the application already has. Do not add a framework if there
       isn't one.
-- [ ] 2.7 `cmd/server/main.go`: read `PORT` from an environment variable with a
+- [x] 2.7 `cmd/server/main.go`: read `PORT` from an environment variable with a
       default, construct the calculator, build the router, `http.Server` with
       timeouts, graceful shutdown on interrupt and terminate signals. Nothing
       else.
@@ -352,15 +356,15 @@ backend/
       `http://127.0.0.1:<port>/health` with a short timeout and the process
       exits 0 or 1. The distroless image has no shell and no `wget`, so the
       binary checks itself.
-- [ ] 2.8 Tests with `httptest`: one happy path per operation, each error code,
+- [x] 2.8 Tests with `httptest`: one happy path per operation, each error code,
       malformed JSON, unknown field, wrong method, health.
       Use a fake `Calculator` in at least one test to prove the interface seam.
       `runHealthCheck`: returns 0 against a healthy `httptest` server, 1 against
       a failing one and against a closed port.
-- [ ] 2.9 Handler signatures use `writer http.ResponseWriter, request *http.Request`.
+- [x] 2.9 Handler signatures use `writer http.ResponseWriter, request *http.Request`.
       Request and response structs are named `CalculateRequest`,
       `CalculateResponse`, `ErrorResponse`.
-- [ ] 2.10 Apply the backend rename table to the rest of the backend, including
+- [x] 2.10 Apply the backend rename table to the rest of the backend, including
       JSON tags (`json:"resultado"` → `json:"result"`), log messages, and
       `main.go`. From this commit on, the API speaks English only.
 
@@ -396,13 +400,13 @@ frontend/src/
 
 ### Steps
 
-- [ ] 3.1 `api/types.ts`: `Operation` union, `CalculateRequest`,
+- [x] 3.1 `api/types.ts`: `Operation` union, `CalculateRequest`,
       `CalculateResponse`, `ApiError`. Keep names identical to the Go JSON tags.
-- [ ] 3.2 `api/client.ts`: export a `CalculatorClient` interface and
+- [x] 3.2 `api/client.ts`: export a `CalculatorClient` interface and
       `createHttpClient(baseUrl)`. Base URL from `import.meta.env.VITE_API_URL`
       (or the project's equivalent). Map non-2xx into a typed `ApiError`.
       Grep the codebase afterward: no other file may contain `fetch(` or the URL.
-- [ ] 3.3 `hooks/useCalculator.ts`: `useReducer` with explicit `State` and
+- [x] 3.3 `hooks/useCalculator.ts`: `useReducer` with explicit `State` and
       `Action` types. Client passed as a parameter. Document the transition
       table in a comment at the top of the file:
       - `DIGIT` after a result → starts a new number (overwrite)
@@ -415,26 +419,26 @@ frontend/src/
       - `FAILURE` → show the message, keep the display, clear the pending operation
       - `CLEAR` → initial state
       Inside the hook: `catch (error)` → `dispatch({ type: 'FAILURE', message: toErrorMessage(error) })`.
-- [ ] 3.4 Migrate existing components to consume the hook. Remove scattered
+- [x] 3.4 Migrate existing components to consume the hook. Remove scattered
       `useState` and `fetch`. If Redux, Zustand, or Context exists for this
       state, remove it and note why in the README.
-- [ ] 3.5 Components: `Display` (value, error, loading), `Keypad` (grid of
+- [x] 3.5 Components: `Display` (value, error, loading), `Keypad` (grid of
       `Button`s), `Button` (accessible, `aria-label`, keyboard focus).
       Disable keys while `status === 'loading'`.
-- [ ] 3.6 Client-side input validation: block a second decimal point, block
+- [x] 3.6 Client-side input validation: block a second decimal point, block
       leading zeros, cap display length (for example, 16 characters), map
       keyboard keys to actions. The server remains the source of truth for
       correctness.
-- [ ] 3.7 Responsive: CSS grid keypad, targets of at least 44 px, one breakpoint,
+- [x] 3.7 Responsive: CSS grid keypad, targets of at least 44 px, one breakpoint,
       works at 360 px wide. No new interface library.
-- [ ] 3.8 Advanced operations (if the backend exposes them): `x^y`, `√`, `%` as
+- [x] 3.8 Advanced operations (if the backend exposes them): `x^y`, `√`, `%` as
       keys, with `√` treated as unary (evaluates immediately on the current
       display).
-- [ ] 3.9 Apply the frontend rename table: components, props, state fields,
+- [x] 3.9 Apply the frontend rename table: components, props, state fields,
       hooks, handler names, CSS classes, and file names become English full
       words. Update `api/types.ts` to the English JSON field names from 2.10 at
       the same time — the compiler will point at every use site.
-- [ ] 3.10 Translate user-visible text (button labels, error messages, page
+- [x] 3.10 Translate user-visible text (button labels, error messages, page
       title) to English, per the decision in 0.7. Keep the strings in one place
       (a `messages.ts` object) so the translation is reviewable in a single file.
 
@@ -450,14 +454,14 @@ frontend/src/
 
 ## Phase 4 — Frontend tests
 
-- [ ] 4.1 Reducer tests: table-driven `(before, action, after)` for every
+- [x] 4.1 Reducer tests: table-driven `(before, action, after)` for every
       transition in the 3.3 list, plus the tricky sequences
       (`5 + × 3 =`, `2 + 3 = = =`, digit after result, error then digit).
-- [ ] 4.2 Hook test with a fake `CalculatorClient`: the success path sets the
+- [x] 4.2 Hook test with a fake `CalculatorClient`: the success path sets the
       result, a rejection sets the error, `loading` toggles correctly.
-- [ ] 4.3 Integration tests with Testing Library + MSW: "2 + 3 = 5",
+- [x] 4.3 Integration tests with Testing Library + MSW: "2 + 3 = 5",
       "10 ÷ 0 shows error", "keys disabled while loading".
-- [ ] 4.4 Coverage: `vitest run --coverage` (or the project's runner). Save the
+- [x] 4.4 Coverage: `vitest run --coverage` (or the project's runner). Save the
       summary for the README.
 
 **Gate 4:** green · coverage report generated · commit
@@ -467,20 +471,20 @@ frontend/src/
 
 ## Phase 5 — Docker
 
-- [ ] 5.1 `backend/Dockerfile`: multi-stage — `golang:<version>` build with
+- [x] 5.1 `backend/Dockerfile`: multi-stage — `golang:<version>` build with
       `CGO_ENABLED=0`, final stage `gcr.io/distroless/static`, `nonroot`
       variant (confirm the exact tag when writing the file), `EXPOSE` the port,
       `ENTRYPOINT ["/server"]`. No shell, no package manager, non-root user
       built in.
-- [ ] 5.2 `frontend/Dockerfile`: multi-stage — `node` build, final `nginx:alpine`
-      serving `dist/`, `nginx.conf` proxying `/api/` to the backend service so
+- [x] 5.2 `frontend/Dockerfile`: multi-stage — `node` build, final `nginx:alpine`
+      serving `dist/`, `nginx.conf.template` proxying `/api/` to the backend service so
       the browser talks to one origin (no CORS in Docker). Not distroless:
       static files need a web server, and there is no official distroless
       nginx image.
-- [ ] 5.3 `docker-compose.yml`: two services, one network, environment variable
+- [x] 5.3 `docker-compose.yml`: two services, one network, environment variable
       for the port. Health checks: backend `["CMD", "/server", "healthcheck"]`
       (step 2.7); frontend `wget` against nginx, which `nginx:alpine` includes.
-- [ ] 5.4 `.dockerignore` in both.
+- [x] 5.4 `.dockerignore` in both.
 
 **Gate 5:** from a **fresh clone**, `docker compose up --build` works and the
 calculator runs in the browser. Commit `chore: dockerize frontend and backend`.
@@ -489,7 +493,7 @@ calculator runs in the browser. Commit `chore: dockerize frontend and backend`.
 
 ## Phase 6 — Documentation
 
-- [ ] 6.1 `README.md` sections, in this order:
+- [x] 6.1 `README.md` sections, in this order:
       1. What it is (2 lines) + screenshot or GIF
       2. Architecture — ASCII diagram of the two boundaries
          (`interface → hook → client → HTTP → handler → domain`)
@@ -504,12 +508,12 @@ calculator runs in the browser. Commit `chore: dockerize frontend and backend`.
          layering)
       9. Assumptions (float64 semantics, percentage definition, precision)
       10. What I'd do with more time — start from Appendix D
-- [ ] 6.2 `PROMPTS.md`: chronological, unedited, grouped by phase.
-- [ ] 6.3 Coverage report (deliverable #3): add a `make coverage` (or npm / Go
+- [x] 6.2 `PROMPTS.md`: chronological, unedited, grouped by phase.
+- [x] 6.3 Coverage report (deliverable #3): add a `make coverage` (or npm / Go
       script) target that regenerates both reports, commit the summary table to
       the README, and commit the HTML reports under `docs/coverage/` or link to
       continuous integration.
-- [ ] 6.4 Delete `docs/ANALYSIS.md` or keep it as `docs/BEFORE.md` — either is
+- [x] 6.4 Delete `docs/ANALYSIS.md` or keep it as `docs/BEFORE.md` — either is
       fine; if kept, mention it in the design-decisions section as evidence.
 
 **Gate 6:** a stranger can clone and run from the README alone. Test this
@@ -519,16 +523,20 @@ literally: fresh clone into a temporary directory, follow only the README.
 
 ## Phase 7 — Final review
 
-- [ ] 7.1 Read the whole diff `pre-refactor..HEAD` as a reviewer: dead code,
+- [x] 7.1 Read the whole diff `pre-refactor..HEAD` as a reviewer: dead code,
       `console.log`, commented-out blocks, TODOs, unused dependencies, leftover
       files, any abbreviation or Spanish word that slipped through (run both
       naming greps over the whole repository one last time, including `*.md`,
       `*.yml`, `*.json`, and `*.css`).
-- [ ] 7.2 Walk the assignment line by line (functional, non-functional,
+- [x] 7.2 Walk the assignment line by line (functional, non-functional,
       constraints, deliverables, instructions) and tick each one against the
       repository.
-- [ ] 7.3 Confirm `PROMPTS.md` is complete.
+- [x] 7.3 Confirm `PROMPTS.md` is complete.
 - [ ] 7.4 Tag `v1.0`, push, share the link.
+      Tagged locally at the end of Phase 7. **Still open: push and share.** The
+      repository has no remote; creating one and publishing is the owner's
+      step — `git remote add origin <url>`, then
+      `git push -u origin refactor/architecture --tags`.
 
 ---
 
@@ -559,7 +567,13 @@ literally: fresh clone into a temporary directory, follow only the README.
 | `DIVISION_BY_ZERO` | 422 | `divide` with divisor 0 |
 | `NEGATIVE_SQUARE_ROOT` | 422 | `squareRoot` of a negative number |
 | `NON_FINITE_RESULT` | 422 | Result is NaN or ±Inf (overflow) |
+| `REQUEST_TOO_LARGE` | 413 | Body over 4096 bytes (added in Phase 2) |
+| `METHOD_NOT_ALLOWED` | 405 | Known path, wrong method; the `Allow` header names the right one (added in Phase 2) |
+| `NOT_FOUND` | 404 | Unknown path (added in Phase 2) |
 | `INTERNAL_ERROR` | 500 | Anything unexpected; details logged, not returned |
+
+The last three additions exist so that every response of the API, not only
+those of the calculate handler, uses the same error envelope.
 
 ## Appendix C — Prompt for running this plan with an agent
 

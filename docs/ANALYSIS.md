@@ -304,6 +304,12 @@ Defects found while reading:
   360 px viewport each key is about 66 px wide and about 55 px tall
   (`padding: 16px 0`, `font-size: 19px`), above the 44 px target. Verify in
   Phase 3.
+  **Corrected in Phase 3, after measuring in a browser:** the estimate was
+  wrong. The grid item of the body is `#root`, not the panel, so
+  `width: 100%` never took effect and the panel was 242 px wide at every
+  viewport, with keys 47 px wide. Still above 44 px, but the calculator did not
+  fill a phone screen. Fixed in the frontend commit: 336 px at a 360 px
+  viewport, keys 71 × 50 px.
 - Loading interface: yes — `calculando en el servidor…` in a `role="status"`
   line; operator and `=` keys disabled.
 - Error interface: yes — same status line, red (`.hay-error`), cleared by the
@@ -682,7 +688,7 @@ gate greps in the plan; all four must print nothing.
 Spanish words the plan's list does not cover:
 
 ```
-grep -rnEi '\b(peticion|entrada|acumulador|reiniciar|pulsar|digito|simbolo|formatear|tecla|fila|clase|etiqueta|desactivad|cabecera|flecha|fondo|texto|tenue|borde|borrar|cambiar|signo|casos|nombre|esperado|obtenido|siguiente|inicio|inicial|servidor|direccion|escribir|registrar|cuerpo|contenedor|evento|indice|expresion|activo|funcion|operador|cero|igual|ejemplo)\w*|\bpie\b|hay-error' \
+grep -rnEi '\b(peticion|entrada|acumulador|reiniciar|pulsar|digito|simbolo|formatear|tecla|fila|clase|etiqueta|desactivad|cabecera|flecha|fondo|texto|tenue|borrar|cambiar|signo|casos|nombre|esperado|obtenido|siguiente|inicio|inicial|servidor|direccion|escribir|registrar|cuerpo|contenedor|evento|expresion|activo|funcion|operador|cero|igual|ejemplo)\w*|\b(pie|borde|indice)\b|hay-error' \
   --include='*.go' --include='*.ts' --include='*.tsx' --include='*.css' --include='go.mod' backend/ frontend/src/
 ```
 

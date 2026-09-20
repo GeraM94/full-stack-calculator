@@ -334,11 +334,49 @@ Phase 2, to avoid writing a Spanish import path in new code. One gate grep gave
 a false positive on a `±` character in a comment; the comment was reworded.
 <!-- adjust after reviewing the diff -->
 
+### 3.14 Phases 2 to 7 — finish the plan
+
+**Tool:** Claude Code (VS Code extension), same session, using its `/goal`
+command so the agent keeps working until the condition holds.
+**Prompt:**
+
+> /goal finish the plan
+
+**Outcome:** Phases 2 to 7 ran in one session, one commit per phase, every gate
+run for real before its commit:
+
+- Phase 2, `3a854f9` — `internal/httpapi` and `cmd/server`. Transport and domain
+  at 100% coverage. The assistant added three error codes that were not in the
+  plan (405, 404, 413) so that every response uses one envelope; accepted, and
+  Appendix B was updated.
+- Phase 3, `20fd251` — reducer, injected client, components. Started from the
+  `useReducer` version in commit `fcd23f4`, as decided in Phase 0. Checking in a
+  real browser found two things the code review had missed: two elements with
+  the role `status`, and a panel that never filled a phone because the grid
+  item was `#root`. My Phase 0 estimate of the key width was wrong; the
+  analysis now says so.
+- Phase 4, `34d436f` — 101 frontend tests, 99.26% statements.
+- Phase 5, `472de61` — built from a fresh clone; both containers healthy;
+  graceful shutdown confirmed with `docker compose stop` (exit 0 in one second).
+- Phase 6, `c84477c` — README, followed literally from another fresh clone.
+- Phase 7 — whole-repository review. The naming greps needed three corrections
+  along the way, all false positives against English: `±` without a UTF-8
+  locale, `border` and `indices`, and `restart`.
+
+Rename-symbol was not used: `gopls` is not installed, and every file with
+Spanish names was replaced by a new file rather than edited, so the compiler
+and the tests did the checking. Not done by the assistant: pushing, which needs
+a remote that I have to create.
+<!-- adjust after reviewing the diffs -->
+
 ---
 
 ## 4. Documentation
 
-<!-- Prompts used for the README, diagrams, or this file. -->
+The README was written by the assistant in Phase 6 as part of entry 3.14; there
+was no separate prompt. During that phase the assistant executed its run
+instructions and its `curl` examples from a fresh clone.
+<!-- adjust: say what you checked and changed in the README after reading it -->
 
 ---
 
