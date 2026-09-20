@@ -1,9 +1,9 @@
 {
-  "name": "calculadora-frontend",
+  "name": "calculator-frontend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Frontend React + TypeScript para la API de calculadora en Go",
+  "description": "React and TypeScript frontend for the Go calculator API",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

@@ -1,5 +1,13 @@
 /// <reference types="vite/client" />
 
-// Esta línea trae las declaraciones de tipos de Vite: le enseña a TypeScript
-// que importar "./styles.css" (o .svg, .png…) es válido aunque no sea código.
-// Sin ella, TS 7 rechaza `import "./styles.css"` con el error TS2882.
+// The reference above teaches TypeScript that importing "./styles.css" is
+// valid. The interfaces below type the one environment variable the app reads.
+
+interface ImportMetaEnv {
+  /** Base URL of the API. Empty or unset means same origin. */
+  readonly VITE_API_URL?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

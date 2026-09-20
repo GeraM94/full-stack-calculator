@@ -1,18 +1,18 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { createHttpClient } from "./api/client";
 import "./styles.css";
 
-const contenedor = document.getElementById("root");
-
-// getElementById devuelve HTMLElement | null. Con strict activado TypeScript
-// no te deja usarlo hasta descartar el null.
-if (!contenedor) {
-  throw new Error("no existe el elemento #root en index.html");
+const container = document.getElementById("root");
+if (!container) {
+  throw new Error("element #root not found in index.html");
 }
 
-createRoot(contenedor).render(
+const client = createHttpClient();
+
+createRoot(container).render(
   <StrictMode>
-    <App />
+    <App client={client} />
   </StrictMode>,
 );

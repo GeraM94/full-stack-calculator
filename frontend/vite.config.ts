@@ -5,9 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    // En desarrollo Vite sirve el React en :5173 y el Go vive en :8080.
-    // Este proxy reenvía /api al backend, así el navegador cree que todo
-    // sale del mismo origen y no aparece ningún problema de CORS.
+    // In development Vite serves the React app on :5173 and the Go API runs on
+    // :8080. This proxy forwards /api to the backend, so the browser sees one
+    // origin and no cross-origin request ever happens. nginx does the same
+    // job in Docker.
     proxy: {
       "/api": "http://localhost:8080",
     },

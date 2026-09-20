@@ -7,14 +7,13 @@
 
     "jsx": "react-jsx",
 
-    // Vite compila con esbuild; tsc solo comprueba tipos.
+    // Vite compiles with esbuild; tsc only checks types.
     "noEmit": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
 
-    // strict activa de golpe las comprobaciones serias de TypeScript.
-    // Sin esto, TS es poco más que JS con anotaciones decorativas.
+    // These flags are the lint gate of the project: there is no separate linter.
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
