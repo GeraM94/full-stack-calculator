@@ -1,0 +1,6 @@
+# Build output and local artifacts stay out of the build context.
+*.exe
+*.test
+coverage.out
+Dockerfile
+.dockerignore

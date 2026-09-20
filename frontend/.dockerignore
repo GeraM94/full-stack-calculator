@@ -1,0 +1,6 @@
+# Installed and generated files stay out of the build context.
+node_modules
+dist
+coverage
+Dockerfile
+.dockerignore
