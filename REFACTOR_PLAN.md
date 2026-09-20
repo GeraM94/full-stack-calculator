@@ -533,10 +533,14 @@ literally: fresh clone into a temporary directory, follow only the README.
       repository.
 - [x] 7.3 Confirm `PROMPTS.md` is complete.
 - [ ] 7.4 Tag `v1.0`, push, share the link.
-      Tagged locally at the end of Phase 7. **Still open: push and share.** The
-      repository has no remote; creating one and publishing is the owner's
-      step — `git remote add origin <url>`, then
-      `git push -u origin refactor/architecture --tags`.
+      Tagged at the end of Phase 7. Pushed on 2026-09-19 to
+      `github.com/GeraM94/full-stack-calculator`: the branch
+      `refactor/architecture` and the tags `pre-refactor` and `v1.0`.
+      **Still open:** the remote `main` holds only the README that GitHub
+      generated, with a history unrelated to this repository, so the default
+      branch does not show the work yet. The owner decides how to fix that
+      (make `refactor/architecture` the default branch, or replace `main`), and
+      then shares the link.
 
 ---
 

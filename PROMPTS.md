@@ -369,6 +369,21 @@ and the tests did the checking. Not done by the assistant: pushing, which needs
 a remote that I have to create.
 <!-- adjust after reviewing the diffs -->
 
+### 3.15 Publishing
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> What is pending? I already made the repository
+> https://github.com/GeraM94/full-stack-calculator.git
+
+**Outcome:** The assistant checked the remote before pushing and found that
+GitHub had created a `main` branch with its own README and an unrelated
+history. It pushed only what could not overwrite anything — the branch
+`refactor/architecture` and the tags `pre-refactor` and `v1.0` — and left the
+decision about `main` to me.
+<!-- adjust: say what you decided for the default branch -->
+
 ---
 
 ## 4. Documentation
