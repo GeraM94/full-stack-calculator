@@ -3,38 +3,166 @@
 This file documents how AI tooling was used to build and refactor the calculator,
 as required by the assignment ("Share any prompts that you used in your work").
 
-**Tools used:** <!-- fill in: Claude (Cowork / claude.ai), Claude Code, Cursor, ChatGPT, Copilot… -->
+**Tools used:**
 
-**How I used them:** <!-- 2–3 lines in your own words. Example: I used AI for
-architecture discussion, to generate a refactor plan, and to draft boilerplate and
-tests. I reviewed every output, rejected suggestions that added scope, and wrote the
-design decisions myself. -->
+- **Claude Code** (VS Code extension) — built the first version, executed the
+  refactor plan, verified the result, and published the repository
+  (sections 1, 3, 4, and 5).
+- **Claude** (Cowork chat session) — architecture discussion and the refactor
+  plan, `REFACTOR_PLAN.md` (section 2).
+
+**How I used them:** The assistant wrote the code. I set the direction, asked for
+the alternatives, and made the scope and design decisions; the ones where I
+overrode or pushed back on the assistant are listed under
+[Decisions that were mine](#decisions-that-were-mine). The refactor ran phase by
+phase against the gates written in the plan, one commit per phase.
 
 Prompts are listed in chronological order, with spelling and punctuation corrected
-and the substance unchanged. The "Outcome" line says what I did with the answer —
-accepted, modified, or rejected — because that is the part that shows judgment, not
-the prompt itself.
+and the substance unchanged. Prompts I wrote in Spanish are given in the original,
+followed by an English translation. The "Outcome" line says what I did with the
+answer — accepted, modified, or rejected — because that is the part that shows
+judgment, not the prompt itself. Messages that only moved a session along
+("continue", "okay, so what is next?", "the files are in that path now") are left
+out.
 
 ---
 
 ## 1. Original build
 
-<!--
-Recover these from wherever you built the first version. See "Where to find your
-prompt history" at the bottom of this file. Paste each one using the block below.
-If you built part of it without AI, say so — that is also information.
--->
+The first version was built with Claude Code on 17 September, in the session in
+which I was setting up Go. Prompts recovered from the session history.
 
-### 1.1 <!-- short title, e.g. "Scaffold the Go backend" -->
+### 1.1 Starting point
 
-**Tool:** <!-- -->
+**Tool:** Claude Code (VS Code extension)
 **Prompt:**
 
-> <!-- paste verbatim -->
+> ¿Principalmente se usa Go para crear backend? ¿Cuáles son sus aplicaciones?
+> Hagamos una calculadora paso por paso.
+>
+> *Is Go mainly used to build backends? What are its applications? Let's build a
+> calculator step by step.*
 
-**Outcome:** <!-- accepted / modified because… / rejected because… -->
+**Outcome:** An overview of where Go is used, and the first step of a
+command-line calculator meant as a syntax exercise. I changed course in 1.2 and
+asked for the full application instead.
 
-### 1.2 <!-- next -->
+### 1.2 The application
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Créame una calculadora con TypeScript y Go.
+>
+> *Build me a calculator with TypeScript and Go.*
+
+**Outcome:** The assistant asked two questions before writing code. I chose a
+full-stack layout (Go API plus a TypeScript web frontend) over a command-line
+tool, and a finished, working application over a guided build. It wrote the Go
+backend — standard library only, `POST /api/calcular`, tests — and started a
+plain TypeScript frontend, which I interrupted with 1.3.
+
+### 1.3 React for the frontend
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Use React and TypeScript for the frontend.
+
+**Outcome:** Accepted. React 19, Vite, strict TypeScript; a `useCalculadora` hook
+built on `useState`; the Go binary also served the built frontend. Verified by
+the assistant with `go vet`, 8 Go tests, `tsc --noEmit`, and requests against the
+running server. This is commit `6fb5b17`. Identifiers, JSON fields, and messages
+were in Spanish, which section 2 later changes.
+
+### 1.4 React Query?
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> `useCalculadora.ts` es un hook, ¿verdad?, que usamos para manejar el estado.
+> ¿Conviene usar React Query para ello?
+>
+> *`useCalculadora.ts` is a hook, right, the one we use to manage state? Would
+> React Query be a good fit for that?*
+
+**Outcome:** No: React Query caches server state, and almost all of this hook is
+client state, so it would replace about 15 lines out of 150. The answer also
+pointed out a real defect: two requests could overlap, because the handlers read
+state from a stale closure and the keyboard bypassed the disabled buttons. The
+fix it proposed was `useReducer`, with no new dependency.
+
+### 1.5 Understanding `useReducer`
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Primero explícame qué hace el `useReducer` y cómo lo implementaríamos.
+>
+> *First explain what `useReducer` does and how we would implement it.*
+
+**Outcome:** An explanation and a design: a pure reducer, one effect that owns
+the request, and a one-line guard against overlapping requests.
+
+### 1.6 The same with Redux
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> ¿Cómo lo implementaríamos con Redux?
+>
+> *How would we implement it with Redux?*
+
+**Outcome:** A Redux Toolkit design (`createSlice`, `createAsyncThunk`,
+`configureStore`). The assistant still recommended `useReducer` as proportional
+to the project.
+
+### 1.7 Both versions, one commit each
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Genérame dos ejemplos sencillos, uno con Redux Toolkit y otro con reducer, para
+> evaluar cómo se comporta cada cosa. ¿Podrías hacer el archivo con reducer,
+> después sustituirlo con Redux Toolkit, y hacer commit de cada uno para ver las
+> diferencias en la herramienta de source control?
+>
+> *Generate two simple examples, one with Redux Toolkit and one with a reducer,
+> so I can evaluate each. Could you write the reducer version, then replace it
+> with Redux Toolkit, and commit each one so I can see the differences in the
+> source control view?*
+
+**Outcome:** Commits `fcd23f4` (`useState` → `useReducer`) and `b20a232`
+(`useReducer` → Redux Toolkit). I compared the two diffs side by side. That
+comparison is why the design decisions table can say Redux Toolkit was tried.
+
+### 1.8 Back to the simplest version before the refactor
+
+**Tool:** Claude Code (VS Code extension), a new session on 19 September
+**Prompt:**
+
+> I'm about to give you a markdown file with all the instructions to refactor the
+> app. We must not over-engineer, so remove the `useReducer` and Redux Toolkit
+> things; let's start with the initial version of the app.
+
+**Follow-up prompts in the same exchange:**
+
+> So use `useState`, because for this app Redux Toolkit is over-engineering.
+
+> Okay, fix it. Before committing the changes, let me see them in source control.
+
+> What is that you made? Did you create a hook for the calculator, and for that
+> we delete those files?
+
+> Commit that revert, and afterward I'll send you the plan.
+
+**Outcome:** My decision: the refactor starts from the simplest version. The
+assistant first put the initial version on a side branch; I asked for the change
+on `main`, staged, so I could read it before it was committed. It used a revert
+rather than a reset, so both experiments stay in the history, and checked that
+the tree was identical to `6fb5b17`. My question about the hook was answered
+from the history: the file came back with the revert, it was not new code. This
+is commit `1b273e2`, later tagged `pre-refactor`.
 
 ---
 
@@ -153,11 +281,8 @@ punctuation only.
 
 ## 3. Refactor execution
 
-<!--
-Append here as you go, one entry per prompt, in order. If you run the plan with
-Claude Code, the per-phase prompts from Appendix C of REFACTOR_PLAN.md go here
-verbatim, followed by anything you asked inside each session.
--->
+One Claude Code session, from the analysis to the publication. The per-phase
+prompts come from Appendix C of `REFACTOR_PLAN.md`.
 
 ### 3.1 Phase 0 — analysis
 
@@ -178,8 +303,9 @@ no source file changed. Baseline: backend coverage 10.1%, no frontend tests.
 Findings that changed the plan: the gate grep for Spanish words missed most of
 this code base's vocabulary (extended grep added), single-letter identifiers were
 invisible to the abbreviation grep (second grep added, `t *testing.T` allowed as
-a Go idiom), and Appendix B said `sqrt` where Rule 2 requires `squareRoot`.
-<!-- adjust: say which of the 0.7 decisions you accepted or overrode -->
+a Go idiom), and Appendix B said `sqrt` where Rule 2 requires `squareRoot`. The
+strategy decisions proposed in section 0.7 of the analysis were confirmed or
+changed one by one in entries 3.3 to 3.12.
 
 ### 3.2 Phase 0 — what is left before Phase 1
 
@@ -332,7 +458,6 @@ between Phase 1 and Phase 2 — not in the plan, accepted because Gate 1 needs t
 whole module to compile. It also renamed the Go module now rather than in
 Phase 2, to avoid writing a Spanish import path in new code. One gate grep gave
 a false positive on a `±` character in a comment; the comment was reworded.
-<!-- adjust after reviewing the diff -->
 
 ### 3.14 Phases 2 to 7 — finish the plan
 
@@ -367,7 +492,6 @@ Rename-symbol was not used: `gopls` is not installed, and every file with
 Spanish names was replaced by a new file rather than edited, so the compiler
 and the tests did the checking. Not done by the assistant: pushing, which needs
 a remote that I have to create.
-<!-- adjust after reviewing the diffs -->
 
 ### 3.15 Publishing
 
@@ -381,62 +505,156 @@ a remote that I have to create.
 GitHub had created a `main` branch with its own README and an unrelated
 history. It pushed only what could not overwrite anything — the branch
 `refactor/architecture` and the tags `pre-refactor` and `v1.0` — and left the
-decision about `main` to me.
-<!-- adjust: say what you decided for the default branch -->
+decision about `main` to me, with two options: (A) make the refactor branch the
+default branch, or (B) replace `main` and bring the refactor in through a pull
+request. Decided in 3.18.
+
+### 3.16 Antivirus false positives
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Should I deactivate Windows Defender?
+
+**Outcome:** No. Defender had blocked `go build -o` output during the session, a
+known false positive on unsigned Go binaries. The assistant had already worked
+around it with `go run` and Docker, and no security setting was changed.
+
+### 3.17 Backend tests
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Did we implement tests for the backend?
+
+**Outcome:** Yes: table-driven tests for the domain and `httptest` tests for the
+transport, both packages at 100% statement coverage. I asked for a second
+opinion in a separate session (5.2).
+
+### 3.18 Publishing decision, this file, and the README
+
+**Tool:** Claude Code (VS Code extension)
+**Prompt:**
+
+> Do B. And for PROMPTS.md: one of the assignment's requirements says "Share any
+> prompts that you used in your work" — are we accomplishing that? And yes, set
+> up the README with all the instructions, as the assignment says.
+
+**Outcome:** My decision on publishing: option B. GitHub's generated `main` was
+replaced by the project history (a forced push guarded by a lease on the
+expected commit), and the refactor came in through pull request #1, so the
+default branch shows the final code and the pull request shows the whole
+refactor.
+
+On the prompts requirement the honest answer was "not yet": section 1 was an
+empty template and so was the header. The assistant recovered the original-build
+prompts from the Claude Code session history on my machine and filled section 1,
+added the entries that were missing (3.16, 3.17, section 5), and replaced the
+template's closing section with the list of decisions below.
+
+The README already covered the four items the assignment lists. It gained a
+table that maps every item of the assignment to its section, a Setup section
+with the clone command, and separate run steps for the backend and the frontend.
+
+While doing this the assistant noticed that two other sessions of mine were
+working in the same folder, and coordinated with them so that no commit
+collided.
 
 ---
 
 ## 4. Documentation
 
-The README was written by the assistant in Phase 6 as part of entry 3.14; there
-was no separate prompt. During that phase the assistant executed its run
-instructions and its `curl` examples from a fresh clone.
-<!-- adjust: say what you checked and changed in the README after reading it -->
+The README was written by the assistant in Phase 6 as part of entry 3.14, and
+extended in 3.18; there was no separate prompt. In Phase 6 the assistant executed
+the run instructions and the `curl` examples from a fresh clone, and did so again
+after the changes in 3.18.
 
 ---
 
-## What I did without AI
+## 5. Verification in separate sessions
 
-<!--
-Optional but strong: list the things you decided or wrote yourself — the design
-decisions table, the choice to cut scope, the test cases you added by hand, bugs you
-found that the AI missed. Evaluators read this section closely.
--->
+On the last day I opened two more Claude Code sessions next to the main one, to
+have the result checked by an assistant that had not written it.
+
+### 5.1 Are the container images ready?
+
+**Tool:** Claude Code (VS Code extension), separate session
+**Prompts:**
+
+> Could you verify if the container images for deploying the backend and the
+> frontend are ready?
+
+> Okay, so I'm looking at the Docker app and I see 4 instances or builds. Check
+> that and delete those we don't need.
+
+> Okay, what are those builds for? How does it work?
+
+> Do we accomplish this requirement with that: "Dockerfile to run frontend +
+> backend together"?
+
+> Yeah, I know that it's optional, but I still want to submit it.
+
+**Outcome:** Both images built and the stack started: two healthy containers, the
+backend at 23.2 MB on distroless as a non-root user, the frontend at 92.9 MB; a
+calculation answered through the nginx proxy, and a division by zero returned
+422. The four "builds" were BuildKit history records, two per run; the two oldest
+were deleted and no image was touched. On the requirement: it describes a result
+— one command that runs both parts — and `docker compose up --build` delivers
+it. That session also proposed publishing by pushing the refactor branch straight
+onto `main`; I kept the pull request route of 3.18. The sentence it drafted for
+the README, pointing from "Run with Docker" to the design decision, was kept.
+
+### 5.2 Are the backend tests any good?
+
+**Tool:** Claude Code (VS Code extension), separate session
+**Prompts:**
+
+> Could you check the unit tests for the Go backend?
+
+> What do I need to add to the PATH to check that? And yes, add the missing
+> tests.
+
+> Okay, we need to cover everything with tests, so do the test for `run()`. And
+> yes, what do I need to add to the system variables?
+
+**Outcome:** All green, and then a manual mutation test on a scratch copy: 16
+deliberate defects, 14 caught. The two survivors were real gaps — nothing
+asserted that the request-logging middleware logs, and the `Content-Type` of
+error responses was never checked — and both now have tests. For the last prompt
+the assistant extracted `run(ctx, listener, logger)` out of `main`, so that
+serving and graceful shutdown are tested against a real listener, including a
+shutdown that runs out of time and a listener that fails. Backend after this
+session: 17 test functions, 75 cases, 88.5% of statements; only `func main` is
+uncovered. The PATH questions were about `go test -race`, which needs a C
+compiler that my Windows machine does not have; the answer was the MSYS2 package
+and the folder to add to the PATH, or running the race detector inside the
+official Go container instead. The main session reviewed these changes, ran every
+gate of the plan on them, and committed them.
 
 ---
 
-## Where to find your prompt history
+## Decisions that were mine
 
-Delete this section before submitting.
+The assistant wrote the code; these are the points where I chose the direction,
+overrode its recommendation, or asked the question that changed the result.
 
-**Claude Code (terminal).** Every session is stored as JSON Lines under your home
-folder. On Windows: `C:\Users\<you>\.claude\projects\<project-folder-slug>\*.jsonl`.
-On macOS / Linux: `~/.claude/projects/…`. Each project folder is named after the
-path you ran `claude` from. To print only your own messages from one session
-(requires `jq`):
-
-```
-jq -r 'select(.type == "user") | .message.content | if type == "array" then map(select(.type == "text") | .text) | join("\n") else . end' session.jsonl
-```
-
-`claude --resume` also lists past sessions with their first message, which helps
-find the right file.
-
-**Claude desktop / claude.ai / Cowork.** Open the conversation and copy your
-messages, or export everything: Settings → Privacy → Export data (arrives by email
-as JSON).
-
-**Cursor.** The chat panel keeps history per workspace; copy from there. Cursor
-also stores it in its SQLite state database, but copying is faster for a few
-prompts.
-
-**ChatGPT.** Settings → Data controls → Export data. Or open the conversation and
-copy.
-
-**GitHub Copilot Chat (VS Code).** No export; copy from the chat view while the
-session is still open.
-
-**A rule for pasting:** keep the substance verbatim. Fixing spelling and
-punctuation is fine (that is what was done in Section 2); rewriting a prompt to
-sound more expert than it was defeats the purpose of the requirement, and
-evaluators can usually tell.
+- **Start from the simplest version.** I had the Redux Toolkit and `useReducer`
+  experiments reverted as over-engineering before the refactor began, and read
+  the change in source control before it was committed (1.8). The plan later
+  brought `useReducer` back for a concrete reason, the overlapping requests found
+  in 1.4, not by default.
+- **Question the plan itself.** "Did you consider not over-engineering this?"
+  (2.4) led to checking every nice-to-have against the assignment (3.4).
+- **Naming.** Full words, no abbreviations (2.6); English everywhere, including
+  the JSON contract (2.7).
+- **Scope rule.** Build what the assignment lists, even when optional — the
+  advanced operations and Docker (3.5, 3.6); defer what it never mentions — the
+  operations endpoint and CORS (3.7).
+- **Keep graceful shutdown**, against the assistant's deferral (3.7).
+- **Distroless backend image.** The assistant had settled on `alpine`; I kept
+  asking until the cost of the alternative was on the table (3.8, 3.9).
+- **Two containers**, not one image that makes the backend serve the frontend
+  again (3.11, 3.12).
+- **A second opinion.** Separate sessions to check the Docker images and the
+  backend tests (section 5).
+- **Publishing through a pull request** onto a replaced `main` (3.18).

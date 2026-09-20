@@ -536,11 +536,11 @@ literally: fresh clone into a temporary directory, follow only the README.
       Tagged at the end of Phase 7. Pushed on 2026-09-19 to
       `github.com/GeraM94/full-stack-calculator`: the branch
       `refactor/architecture` and the tags `pre-refactor` and `v1.0`.
-      **Still open:** the remote `main` holds only the README that GitHub
-      generated, with a history unrelated to this repository, so the default
-      branch does not show the work yet. The owner decides how to fix that
-      (make `refactor/architecture` the default branch, or replace `main`), and
-      then shares the link.
+      The remote `main` held only the README that GitHub generated, with a
+      history unrelated to this repository. The owner chose to replace it: `main`
+      now starts at `pre-refactor`, and the refactor comes in through pull
+      request #1. `v1.0` marks the end of Phase 7; the commits after it are
+      documentation and tests. **Still open:** sharing the link.
 
 ---
 

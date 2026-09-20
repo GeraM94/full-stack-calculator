@@ -6,6 +6,19 @@ every result. Basic operations plus power, square root, and percentage.
 
 ![The calculator, with a pending multiplication](docs/screenshot.png)
 
+## Where to find what the assignment asks for
+
+| The assignment asks for | Where it is |
+|---|---|
+| Setup instructions | [Setup](#setup) |
+| How to run the frontend and backend | [Run locally](#run-locally) · [Run with Docker](#run-with-docker) |
+| Examples of API calls | [API reference](#api-reference) — `curl` commands with their real responses |
+| Design decisions or assumptions | [Design decisions](#design-decisions) · [Assumptions](#assumptions) |
+| Unit tests and coverage report | [Testing](#testing) · reports committed under [docs/coverage/](docs/coverage/) |
+| Optional operations: exponentiation, square root, percentage | Built: `power`, `squareRoot`, `percentage` |
+| Optional: Dockerfile to run frontend + backend together | [Run with Docker](#run-with-docker) — one command |
+| Prompts used | [PROMPTS.md](PROMPTS.md) |
+
 ## Architecture
 
 Two layers on each side, and one defended boundary between pure logic and
@@ -31,7 +44,9 @@ transport on both:
 - **Backend.** `internal/calculator` is plain Go: an operations table, five
   sentinel errors, no HTTP and no JSON in its dependency graph.
   `internal/httpapi` is the only place where a domain error becomes a status
-  code. `cmd/server/main.go` does wiring and nothing else.
+  code. `cmd/server` is wiring: `main` owns the process boundary (environment,
+  signals, exit codes) and `run` serves until it is told to stop, then shuts
+  down gracefully.
 - **Frontend.** The reducer in `hooks/useCalculator.ts` is a pure function with
   its transition table documented at the top of the file. `api/client.ts` is
   the only module that calls `fetch`. The client is injected into the hook,
@@ -53,30 +68,64 @@ frontend/src/
 └── App.tsx, main.tsx, styles.css
 ```
 
-## Prerequisites
+## Setup
 
-| To run | You need |
-|---|---|
-| locally | Go 1.27 or newer · Node 22 or newer (npm included) |
-| with Docker | Docker with Compose v2 — nothing else |
+```bash
+git clone https://github.com/GeraM94/full-stack-calculator.git
+cd full-stack-calculator
+```
+
+| To run | You need | Check with |
+|---|---|---|
+| locally | Go 1.27 or newer · Node 22 or newer (npm included) | `go version` · `node --version` |
+| with Docker | Docker with Compose v2 — nothing else | `docker compose version` |
+
+The backend has no dependencies to install: `go.mod` lists none. The frontend
+installs its own with `npm install`, in the next section. There is nothing to
+configure; every setting has a default.
+
+Every command in this README is written for a POSIX shell: Linux, macOS, WSL,
+or Git Bash on Windows. In PowerShell the `curl` examples need different
+quoting.
 
 ## Run locally
 
-Two terminals. The frontend development server proxies `/api` to the backend,
-so the browser sees a single origin.
+Two terminals, both starting from the repository root.
+
+### 1. Backend — API on <http://localhost:8080>
 
 ```bash
-# Terminal 1 — API on http://localhost:8080
 cd backend
 go run ./cmd/server
+```
 
-# Terminal 2 — application on http://localhost:5173
+It logs `calculator listening on http://localhost:8080`. Check it from another
+terminal:
+
+```bash
+curl -s http://localhost:8080/health
+# 200  {"status":"ok"}
+```
+
+Stop it with `Ctrl+C`; it finishes the requests in flight before it exits.
+
+### 2. Frontend — application on <http://localhost:5173>
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>.
+Open <http://localhost:5173>. The development server proxies `/api` to the
+backend on port 8080, so the browser sees a single origin. Start the backend
+first; without it the calculator shows "Cannot reach the server" when you press
+`=`, and recovers as soon as the backend is up.
+
+`npm run build` type-checks and writes the production bundle to
+`frontend/dist/`. That bundle is what the Docker image serves.
+
+### Settings
 
 | Variable | Where | Default | Meaning |
 |---|---|---|---|
@@ -88,6 +137,8 @@ Keyboard: `0`–`9` `.` digits · `+` `-` `*` `/` `^` `%` operations · `Enter` 
 
 ## Run with Docker
 
+Frontend and backend together, with one command from the repository root:
+
 ```bash
 docker compose up --build
 ```
@@ -98,6 +149,12 @@ Two containers: **nginx** serves the built frontend and proxies `/api/` to the
 **Go API**, which is not published on the host. The frontend waits until the
 backend reports healthy. `FRONTEND_PORT` (default `3000`) and `BACKEND_PORT`
 (default `8080`) can be overridden from the shell or a `.env` file.
+
+The files are [docker-compose.yml](docker-compose.yml),
+[backend/Dockerfile](backend/Dockerfile), and
+[frontend/Dockerfile](frontend/Dockerfile). The choice of two containers over a
+single image running both processes under a supervisor is explained under
+[Design decisions](#design-decisions).
 
 ## API reference
 
@@ -194,13 +251,14 @@ sh scripts/coverage.sh
 | Layer | Tests | Statement coverage |
 |---|---|---|
 | `backend/internal/calculator` — domain | table-driven: every operation, every sentinel, overflow, `0.1 + 0.2`, percentage semantics | **100%** |
-| `backend/internal/httpapi` — transport | `httptest`: each operation, each error code, malformed input, routing, panic recovery, a fake `Calculator` | **100%** |
-| `backend/cmd/server` | health check subcommand, environment lookup | 26.2% — the remainder is `func main` |
-| **Backend total** | 12 test functions, 70 cases | **78.5%** |
+| `backend/internal/httpapi` — transport | `httptest`: each operation, each error code, malformed input, routing, the `Content-Type` of every response, request logging, panic recovery, a fake `Calculator` | **100%** |
+| `backend/cmd/server` | `run` against a real listener: serving, graceful shutdown, a shutdown that runs out of time, a listener that fails; server timeouts; the health check subcommand | 63.0% — the remainder is `func main`, which is wiring |
+| **Backend total** | 17 test functions, 75 cases | **88.5%** |
 | **Frontend total** | 101 tests in 5 files | **99.26%** statements · 97.88% branches · 100% functions · 100% lines |
 
 The HTML reports are committed: [backend](docs/coverage/backend.html) ·
-[frontend](docs/coverage/frontend/index.html). Before the refactor the backend
+[frontend](docs/coverage/frontend/index.html). GitHub shows HTML files as
+source, so open them from a clone to see them rendered. Before the refactor the backend
 stood at 10.1% and the frontend had no tests
 ([docs/ANALYSIS.md](docs/ANALYSIS.md), section 0.5).
 
