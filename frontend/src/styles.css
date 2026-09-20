@@ -1,16 +1,16 @@
 :root {
-  --fondo: #0f1115;
+  --background: #0f1115;
   --panel: #171a21;
-  --tecla: #22262f;
-  --tecla-hover: #2c313c;
-  --operador: #2f6f8f;
-  --operador-hover: #3a87ab;
-  --go: #00add8; /* el cian del logo de Go */
+  --button: #22262f;
+  --button-hover: #2c313c;
+  --operator: #2f6f8f;
+  --operator-hover: #3a87ab;
+  --go: #00add8; /* the cyan of the Go logo */
   --go-hover: #22c3ea;
-  --texto: #e8eaed;
-  --texto-tenue: #8b93a1;
+  --text: #e8eaed;
+  --text-muted: #8b93a1;
   --error: #ff6b6b;
-  --borde: #262b35;
+  --border: #262b35;
 }
 
 * {
@@ -22,24 +22,36 @@
 body {
   min-height: 100vh;
   display: grid;
+  /* A definite column: in the implicit auto track, the "width: 100%" below
+     would resolve against the content itself and never fill a phone. */
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
-  padding: 24px 16px;
-  background: radial-gradient(circle at 50% 0%, #1a1f2b 0%, var(--fondo) 60%);
-  color: var(--texto);
+  padding: 16px 12px;
+  background: radial-gradient(circle at 50% 0%, #1a1f2b 0%, var(--background) 60%);
+  color: var(--text);
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
-.calculadora {
+/* The grid item of the body is the React root, not the panel. */
+#root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* Mobile first: the panel fills a 360 px screen. The one breakpoint below
+   gives it room on anything wider. */
+.calculator {
   width: 100%;
   max-width: 340px;
   background: var(--panel);
-  border: 1px solid var(--borde);
+  border: 1px solid var(--border);
   border-radius: 18px;
-  padding: 18px;
+  padding: 14px;
   box-shadow: 0 20px 50px rgb(0 0 0 / 45%);
 }
 
-.cabecera {
+.header {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -47,24 +59,24 @@ body {
   margin-bottom: 14px;
 }
 
-.etiqueta {
+.badge {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--texto-tenue);
-  border: 1px solid var(--borde);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
   border-radius: 999px;
   padding: 3px 10px;
 }
 
-.flecha {
+.arrow {
   color: var(--go);
   font-size: 13px;
 }
 
-.pantalla {
+.display {
   background: #0c0e13;
-  border: 1px solid var(--borde);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px 16px;
   text-align: right;
@@ -74,113 +86,136 @@ body {
   justify-content: flex-end;
 }
 
-.expresion {
+.expression {
   font-size: 13px;
-  color: var(--texto-tenue);
+  color: var(--text-muted);
   min-height: 18px;
   font-variant-numeric: tabular-nums;
 }
 
-.resultado {
-  font-size: 34px;
+.result {
+  display: block;
+  font-size: 30px;
   font-weight: 600;
   line-height: 1.2;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
 
-.estado {
+.message {
   min-height: 18px;
   margin: 8px 2px 4px;
   font-size: 12px;
   text-align: right;
-  color: var(--texto-tenue);
+  color: var(--text-muted);
 }
 
-.estado.hay-error {
+.message.has-error {
   color: var(--error);
 }
 
-.teclado {
+.keypad {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 
-.tecla {
+.button {
   appearance: none;
   border: none;
   border-radius: 12px;
-  background: var(--tecla);
-  color: var(--texto);
+  background: var(--button);
+  color: var(--text);
   font-size: 19px;
   font-family: inherit;
-  padding: 16px 0;
+  /* Touch target: 48 px is above the 44 px minimum whatever the font does. */
+  min-height: 48px;
+  padding: 12px 0;
   cursor: pointer;
   transition:
     background 0.12s ease,
     transform 0.06s ease;
 }
 
-.tecla:hover:not(:disabled) {
-  background: var(--tecla-hover);
+.button:hover:not(:disabled) {
+  background: var(--button-hover);
 }
 
-.tecla:active:not(:disabled) {
+.button:active:not(:disabled) {
   transform: scale(0.96);
 }
 
-.tecla:focus-visible {
+.button:focus-visible {
   outline: 2px solid var(--go);
   outline-offset: 2px;
 }
 
-.tecla:disabled {
+.button:disabled {
   opacity: 0.45;
   cursor: progress;
 }
 
-.tecla.funcion {
-  color: var(--texto-tenue);
+.button.function {
+  color: var(--text-muted);
   font-size: 16px;
 }
 
-.tecla.operador {
-  background: var(--operador);
+.button.operator {
+  background: var(--operator);
   font-weight: 600;
 }
 
-.tecla.operador:hover:not(:disabled) {
-  background: var(--operador-hover);
+.button.operator:hover:not(:disabled) {
+  background: var(--operator-hover);
 }
 
-.tecla.operador.activo {
+.button.active,
+.button.active:hover:not(:disabled) {
   background: var(--go);
   color: #06232c;
 }
 
-.tecla.cero {
-  grid-column: span 2;
-}
-
-.tecla.igual {
+.button.equals {
   background: var(--go);
   color: #06232c;
   font-weight: 700;
 }
 
-.tecla.igual:hover:not(:disabled) {
+.button.equals:hover:not(:disabled) {
   background: var(--go-hover);
 }
 
-.pie {
+.button.wide {
+  grid-column: span 2;
+}
+
+.button.tall {
+  grid-row: span 2;
+}
+
+.footer {
   margin-top: 14px;
   text-align: center;
   font-size: 11px;
-  color: var(--texto-tenue);
+  color: var(--text-muted);
 }
 
-.pie code {
-  color: var(--go);
-  font-size: 11px;
+@media (min-width: 480px) {
+  body {
+    padding: 24px 16px;
+  }
+
+  .calculator {
+    max-width: 380px;
+    padding: 18px;
+  }
+
+  .result {
+    font-size: 34px;
+  }
+
+  .button {
+    min-height: 56px;
+    font-size: 20px;
+  }
 }

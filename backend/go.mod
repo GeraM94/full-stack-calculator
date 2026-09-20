@@ -1,3 +1,3 @@
-module ejemplo/calculadora
+module example/calculator
 
 go 1.27
