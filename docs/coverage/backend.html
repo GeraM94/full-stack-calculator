@@ -57,7 +57,7 @@
 				
 				<option value="file0">example/calculator/cmd/server/healthcheck.go (100.0%)</option>
 				
-				<option value="file1">example/calculator/cmd/server/main.go (8.8%)</option>
+				<option value="file1">example/calculator/cmd/server/main.go (55.3%)</option>
 				
 				<option value="file2">example/calculator/internal/calculator/calculator.go (100.0%)</option>
 				
@@ -112,8 +112,9 @@ package main
 
 import (
         "context"
-        "errors"
+        "fmt"
         "log"
+        "net"
         "net/http"
         "os"
         "os/signal"
@@ -124,48 +125,76 @@ import (
         "example/calculator/internal/httpapi"
 )
 
-const (
-        defaultPort     = "8080"
-        shutdownTimeout = 10 * time.Second
-)
+const defaultPort = "8080"
 
+// shutdownTimeout is how long a graceful shutdown waits for the requests that
+// are still in flight. It is a variable so a test can shorten it.
+var shutdownTimeout = 10 * time.Second
+
+// main is wiring and nothing else: the process boundary (arguments, the
+// environment, signals, exit codes) is here, and the behaviour is in run.
 func main() {
-        <span class="cov0" title="0">port := environmentOrDefault("PORT", defaultPort)
-        if len(os.Args) &gt; 1 &amp;&amp; os.Args[1] == "healthcheck" </span>{
+        <span class="cov0" title="0">logger := log.New(os.Stderr, "", log.LstdFlags)
+        port := environmentOrDefault("PORT", defaultPort)
+</span>
+        <span class="cov0" title="0">if len(os.Args) &gt; 1 &amp;&amp; os.Args[1] == "healthcheck" </span>{
                 <span class="cov0" title="0">os.Exit(runHealthCheck(port))
 </span>        }
 
-        <span class="cov0" title="0">logger := log.New(os.Stderr, "", log.LstdFlags)
-        server := &amp;http.Server{
-                Addr:              ":" + port,
+        // Binding here rather than inside run means a port already in use is
+        // reported before anything else starts.
+        <span class="cov0" title="0">listener, err := net.Listen("tcp", ":"+port)
+        if err != nil </span>{
+                <span class="cov0" title="0">logger.Fatalf("cannot listen on port %s: %v", port, err)
+</span>        }
+
+        <span class="cov0" title="0">ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+        defer stop()
+</span>
+        <span class="cov0" title="0">if err := run(ctx, listener, logger); err != nil </span>{
+                <span class="cov0" title="0">logger.Fatal(err)
+</span>        }
+}
+
+// newServer is the configured server of the API. The timeouts are the point of
+// this function: without them one slow client holds a connection forever.
+func newServer(logger *log.Logger) *http.Server {
+        <span class="cov8" title="1">return &amp;http.Server{
                 Handler:           httpapi.NewRouter(calculator.New(), logger),
                 ReadHeaderTimeout: 5 * time.Second,
                 ReadTimeout:       10 * time.Second,
                 WriteTimeout:      10 * time.Second,
                 IdleTimeout:       60 * time.Second,
 </span>        }
+}
 
-        <span class="cov0" title="0">ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-        defer stop()
+// run serves on the listener until ctx is cancelled and then shuts down
+// gracefully, closing the listener. It returns nil when the shutdown finished
+// within shutdownTimeout.
+func run(ctx context.Context, listener net.Listener, logger *log.Logger) error {
+        <span class="cov8" title="1">server := newServer(logger)
 </span>
-        <span class="cov0" title="0">serverErrors := make(chan error, 1)
+        <span class="cov8" title="1">serverErrors := make(chan error, 1)
         go func() </span>{
-                <span class="cov0" title="0">logger.Printf("calculator listening on http://localhost:%s", port)
-                serverErrors &lt;- server.ListenAndServe()
+                // The address of a TCP listener always carries a port.
+                <span class="cov8" title="1">_, port, _ := net.SplitHostPort(listener.Addr().String())
+                logger.Printf("calculator listening on http://localhost:%s", port)
+                serverErrors &lt;- server.Serve(listener)
 </span>        }()
 
-        <span class="cov0" title="0">select </span>{
+        <span class="cov8" title="1">select </span>{
         case err := &lt;-serverErrors:
-                <span class="cov0" title="0">if !errors.Is(err, http.ErrServerClosed) </span>{
-                        <span class="cov0" title="0">logger.Fatalf("server stopped: %v", err)
-</span>                }
+                // Serve only returns http.ErrServerClosed after a Shutdown, and that
+                // shutdown is the other branch, so anything arriving here is a failure.
+                <span class="cov8" title="1">return fmt.Errorf("server stopped: %w", err)</span>
         case &lt;-ctx.Done():
-                <span class="cov0" title="0">logger.Print("shutting down")
+                <span class="cov8" title="1">logger.Print("shutting down")
                 shutdownContext, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
                 defer cancel()
                 if err := server.Shutdown(shutdownContext); err != nil </span>{
-                        <span class="cov0" title="0">logger.Fatalf("shutdown did not finish: %v", err)
+                        <span class="cov8" title="1">return fmt.Errorf("shutdown did not finish: %w", err)
 </span>                }
+                <span class="cov8" title="1">return nil</span>
         }
 }
 

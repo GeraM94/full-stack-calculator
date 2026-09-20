@@ -24,6 +24,16 @@ func send(router http.Handler, method, path, body string) *httptest.ResponseReco
 	return recorder
 }
 
+// jsonContentType is what every response of the API carries, errors included.
+const jsonContentType = "application/json; charset=utf-8"
+
+func assertJSONContentType(t *testing.T, recorder *httptest.ResponseRecorder) {
+	t.Helper()
+	if got := recorder.Header().Get("Content-Type"); got != jsonContentType {
+		t.Errorf("Content-Type = %q; want %q", got, jsonContentType)
+	}
+}
+
 func decodeError(t *testing.T, recorder *httptest.ResponseRecorder) ErrorDetail {
 	t.Helper()
 	var response ErrorResponse
@@ -58,9 +68,7 @@ func TestCalculate(t *testing.T) {
 			if recorder.Code != http.StatusOK {
 				t.Fatalf("status = %d; want 200; body: %s", recorder.Code, recorder.Body)
 			}
-			if got := recorder.Header().Get("Content-Type"); got != "application/json; charset=utf-8" {
-				t.Errorf("Content-Type = %q", got)
-			}
+			assertJSONContentType(t, recorder)
 			if got := strings.TrimSpace(recorder.Body.String()); got != testCase.wantBody {
 				t.Errorf("body = %s; want %s", got, testCase.wantBody)
 			}
@@ -115,6 +123,7 @@ func TestCalculateErrors(t *testing.T) {
 			if recorder.Code != testCase.wantStatus {
 				t.Errorf("status = %d; want %d", recorder.Code, testCase.wantStatus)
 			}
+			assertJSONContentType(t, recorder)
 			detail := decodeError(t, recorder)
 			if detail.Code != testCase.wantCode {
 				t.Errorf("code = %q; want %q", detail.Code, testCase.wantCode)
@@ -160,6 +169,7 @@ func TestRouting(t *testing.T) {
 			if recorder.Code != testCase.wantStatus {
 				t.Errorf("status = %d; want %d", recorder.Code, testCase.wantStatus)
 			}
+			assertJSONContentType(t, recorder)
 			if got := decodeError(t, recorder).Code; got != testCase.wantCode {
 				t.Errorf("code = %q; want %q", got, testCase.wantCode)
 			}
@@ -251,6 +261,20 @@ func TestPanicIsRecovered(t *testing.T) {
 	}
 	if !strings.Contains(logged.String(), "boom") {
 		t.Error("the panic was not logged")
+	}
+}
+
+// TestRequestsAreLogged covers logRequests. Without it the middleware could be
+// dropped from the chain and every other test in this file would still pass.
+func TestRequestsAreLogged(t *testing.T) {
+	var logged bytes.Buffer
+	router := NewRouter(calculator.New(), log.New(&logged, "", 0))
+
+	send(router, http.MethodPost, "/api/v1/calculate", `{"operation":"add","operands":[1,2]}`)
+
+	// One line: the method, the path, and the duration in parentheses.
+	if got := logged.String(); !strings.HasPrefix(got, "POST /api/v1/calculate (") {
+		t.Errorf("log = %q; want the method, the path and the duration", got)
 	}
 }
 
